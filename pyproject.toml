@@ -56,7 +56,7 @@ ensure_newline_before_comments = true
 line_length = 88
 
 [tool.mypy]
-files = ["src/plxscripting"]
+files = ["src/plxcontroller"]
 mypy_path = 'src'
 namespace_packages = true
 show_error_codes = true
@@ -76,6 +76,7 @@ install_types = true
 [[tool.mypy.overrides]]
 module = [
     "plxscripting.*",
+    "skspatial.*",
     "matplotlib.*",
     "requests.*",
     "nuclei.*",
