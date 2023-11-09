@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from plxcontroller.geometry_3d.point_3d import Point3D
 
 
