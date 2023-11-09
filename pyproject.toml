@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=1.24.2,<2.0",
     "shapely>=2.0.1,<3.0",
     "matplotlib==3.7.1",
+    "scikit-spatial>=7.0.0,<8.0.0",
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -55,7 +56,7 @@ ensure_newline_before_comments = true
 line_length = 88
 
 [tool.mypy]
-files = ["src/plxscripting"]
+files = ["src/plxcontroller"]
 mypy_path = 'src'
 namespace_packages = true
 show_error_codes = true
@@ -75,6 +76,7 @@ install_types = true
 [[tool.mypy.overrides]]
 module = [
     "plxscripting.*",
+    "skspatial.*",
     "matplotlib.*",
     "requests.*",
     "nuclei.*",

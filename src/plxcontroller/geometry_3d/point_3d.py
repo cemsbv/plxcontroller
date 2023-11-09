@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Tuple
+
 
 class Point3D:
     """
@@ -55,3 +57,8 @@ class Point3D:
     def z(self) -> float:
         """Returns the z coordinate of the point."""
         return self._z
+
+    @property
+    def coordinates(self) -> Tuple[float, float, float]:
+        """Returns a tuple with the (x,y,z) coordinates of the point."""
+        return (self.x, self.y, self.z)
