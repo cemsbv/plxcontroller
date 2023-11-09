@@ -23,3 +23,4 @@ def test_point_3d() -> None:
     assert point.x == 1.0
     assert point.y == 2.0
     assert point.z == 3.0
+    assert point.coordinates == (1.0, 2.0, 3.0)

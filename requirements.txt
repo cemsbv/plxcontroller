@@ -69,7 +69,9 @@ jupyter-core==5.5.0
 kiwisolver==1.4.5
     # via matplotlib
 matplotlib==3.7.1
-    # via plxcontroller (pyproject.toml)
+    # via
+    #   plxcontroller (pyproject.toml)
+    #   scikit-spatial
 matplotlib-inline==0.1.6
     # via
     #   ipykernel
@@ -93,6 +95,8 @@ numpy==1.26.1
     #   matplotlib
     #   pandas-stubs
     #   plxcontroller (pyproject.toml)
+    #   scikit-spatial
+    #   scipy
     #   shapely
 packaging==23.2
     # via
@@ -162,6 +166,10 @@ requests==2.31.0
     # via
     #   coveralls
     #   plxscripting
+scikit-spatial==7.0.0
+    # via plxcontroller (pyproject.toml)
+scipy==1.11.3
+    # via scikit-spatial
 shapely==2.0.2
     # via plxcontroller (pyproject.toml)
 six==1.16.0
