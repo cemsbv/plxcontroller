@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2023-11-10
+
+### Bug Fixes
+
+- *(#19)* Fix method `filter_volumes_above_polygons` to consider both all the SoilVolumes and Volumes in plaxis and not only the Volumes.
+
 ## [0.2.0] - 2023-11-10
 
 ### Features
