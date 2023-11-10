@@ -68,7 +68,7 @@ class Plaxis3DInputController:
         TypeError
             if parameters are not of the expected type.
         ValueError
-            if any item of plaxis_volumes is not present in the volumes of the plaxis model.
+            if any item of plaxis_volumes is not present in the Volumes nor SoilVolumes of the plaxis model.
         """
 
         # Validate input
@@ -92,14 +92,18 @@ class Plaxis3DInputController:
                     raise TypeError(
                         f"Unexpected type for item {i} of plaxis_volumes. Expected PlxProxyObject, but got {type(plaxis_volume)}."
                     )
-                if plaxis_volume not in self.g_i.Volumes:
+                if plaxis_volume not in list(
+                    set(list(self.g_i.SoilVolumes) + list(self.g_i.Volumes))
+                ):
                     raise ValueError(
-                        f"Plaxis object {plaxis_volume} is not present in the volumes of the plaxis model."
+                        f"Item {i} of plaxis_volumes is not present in the volumes of the plaxis model."
                     )
 
         # Initialize plaxis_volume list as all the volumes in the Plaxis model.
         if plaxis_volumes is None:
-            plaxis_volumes = self.g_i.Volumes
+            plaxis_volumes = list(
+                set(list(self.g_i.SoilVolumes) + list(self.g_i.Volumes))
+            )
 
         # Map plaxis volumes to bounding boxes
         for plaxis_volume in plaxis_volumes:
