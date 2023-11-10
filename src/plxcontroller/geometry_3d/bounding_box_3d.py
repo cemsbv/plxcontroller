@@ -39,9 +39,9 @@ class BoundingBox3D:
         TypeError
             if any parameter is not of the expected type.
         ValueError
-            if x_max is not > x_min
-            if y_max is not > y_max
-            if z_max is not > z_min
+            if x_max is not >= x_min
+            if y_max is not >= y_max
+            if z_max is not >= z_min
         """
         # Validate types
         if not isinstance(x_min, (float, int)):
@@ -71,14 +71,14 @@ class BoundingBox3D:
             )
 
         # Validate values
-        if not x_max > x_min:
-            raise ValueError("x_max must be > x_min")
+        if not x_max >= x_min:
+            raise ValueError("x_max must be >= x_min")
 
-        if not y_max > y_min:
-            raise ValueError("y_max must be > y_min")
+        if not y_max >= y_min:
+            raise ValueError("y_max must be >= y_min")
 
-        if not z_max > z_min:
-            raise ValueError("z_max must be > z_min")
+        if not z_max >= z_min:
+            raise ValueError("z_max must be >= z_min")
 
         self._x_min = x_min
         self._y_min = y_min
