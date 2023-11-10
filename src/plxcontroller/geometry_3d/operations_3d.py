@@ -57,7 +57,7 @@ def project_vertically_point_onto_polygon_3d(
     # point x and y coordinates input
     a, b, c, d = plane.cartesian()
     if not np.isclose(c, 0.0):
-        z = (d - a * point.x - b * point.y) / c
+        z = (-d - a * point.x - b * point.y) / c
     else:
         # if the coefficient c is close to zero, it means that
         # the plane is parallel to the z-axis, so the z-coordinate
