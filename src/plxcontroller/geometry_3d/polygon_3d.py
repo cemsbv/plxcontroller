@@ -3,8 +3,10 @@ from __future__ import annotations
 from copy import copy
 from typing import List, Tuple
 
+import shapely
 from skspatial.objects import Points as ScikitSpatialPoints
 
+from plxcontroller.geometry_3d.bounding_box_3d import BoundingBox3D
 from plxcontroller.geometry_3d.point_3d import Point3D
 
 
@@ -69,15 +71,32 @@ class Polygon3D:
 
     @property
     def coordinates(self) -> List[Tuple[float, float, float]]:
-        """Return the coordinates of the polygon a list of (x,y,z) tuples."""
+        """Returns the coordinates of the polygon a list of (x,y,z) tuples."""
         return copy(self._coordinates)
 
     @property
     def points(self) -> List[Point3D]:
-        """Return the coordinates of the polygon a list of Point3D."""
+        """Returns the coordinates of the polygon a list of Point3D."""
         return [Point3D(*a) for a in self._coordinates]
 
     @property
     def scikit_spatial_points(self) -> ScikitSpatialPoints:
-        """Return the coordinates of the polygon a skspatial.objects.Points object."""
+        """Returns the coordinates of the polygon a skspatial.objects.Points object."""
         return ScikitSpatialPoints(self._coordinates)
+
+    @property
+    def shapely_polygon_xy_plane(self) -> shapely.Polygon:
+        """Returns the projection in the xy plane as a shapely polygon"""
+        return shapely.Polygon([(point.x, point.y) for point in self.points])
+
+    @property
+    def bounding_box(self) -> BoundingBox3D:
+        """Returns the bounding box of the polygon."""
+        return BoundingBox3D(
+            x_min=min([point.x for point in self.points]),
+            y_min=min([point.y for point in self.points]),
+            z_min=min([point.z for point in self.points]),
+            x_max=max([point.x for point in self.points]),
+            y_max=max([point.y for point in self.points]),
+            z_max=max([point.z for point in self.points]),
+        )

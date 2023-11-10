@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Tuple
 
+import shapely
+
 
 class Point3D:
     """
@@ -62,3 +64,8 @@ class Point3D:
     def coordinates(self) -> Tuple[float, float, float]:
         """Returns a tuple with the (x,y,z) coordinates of the point."""
         return (self.x, self.y, self.z)
+
+    @property
+    def shapely_point_xy_plane(self) -> shapely.Point:
+        """Returns the projection of the point in the xy plane as a shapely.Point object."""
+        return shapely.Point((self.x, self.y))
