@@ -78,6 +78,7 @@ module = [
     "plxscripting.*",
     "skspatial.*",
     "numpy.*",
+    "scipy.*",
     "matplotlib.*",
     "requests.*",
     "nuclei.*",

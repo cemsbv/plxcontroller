@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from typing import List
+
 import numpy as np
+from scipy import spatial
 from skspatial.objects import Plane as ScikitSpatialPlane
 
 from plxcontroller.geometry_3d.point_3d import Point3D
@@ -65,3 +68,16 @@ def project_vertically_point_onto_polygon_3d(
         z = point.z
 
     return Point3D(x=point.x, y=point.y, z=z)
+
+
+def get_convex_hull_vertices_3d(points: List[Point3D]) -> List[Point3D]:
+    convex_hull = spatial.ConvexHull(
+        points=np.vstack([point.coordinates for point in points])
+    )
+
+    vertices = []
+    for vertix_index in convex_hull.vertices:
+        vertix = convex_hull.points[vertix_index]
+        vertices.append(Point3D(x=vertix[0], y=vertix[1], z=vertix[2]))
+
+    return vertices
