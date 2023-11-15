@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import List
-
 import numpy as np
-from scipy import spatial
 from skspatial.objects import Plane as ScikitSpatialPlane
 
 from plxcontroller.geometry_3d.point_3d import Point3D
 from plxcontroller.geometry_3d.polygon_3d import Polygon3D
+from plxcontroller.globals import ABS_TOL
 
 
 def project_vertically_point_onto_polygon_3d(
-    point: Point3D, polygon: Polygon3D
+    point: Point3D,
+    polygon: Polygon3D,
+    tol: float | None = None,
 ) -> Point3D | None:
     """Returns the vertical projection of the Point3D onto Polygon3D.
     If the point is not within the boundaries of the projection of the polygon
@@ -23,16 +23,23 @@ def project_vertically_point_onto_polygon_3d(
         the point to project.
     polygon : Polygon3D
         the polygon to project onto.
-
-    Raises
-    ------
-    TypeError
-        if any parameter is not of the expected type.
+    tol: float | None, optional
+        the allowed tolerance to compared the coordinates of the cut_volumes
+        and the polygons.
+        If None given, then the globals.ABS_TOL will be used.
+        Defaults to None.
 
     Returns
     -------
     Point3D | None
         the projected point onto the polygon.
+
+    Raises
+    ------
+    TypeError
+        if any parameter is not of the expected type.
+    ValueError
+        if tol is not >= 0.
     """
     # Validate input
     if not isinstance(point, Point3D):
@@ -45,8 +52,24 @@ def project_vertically_point_onto_polygon_3d(
             f"Unexpected type for polygon. Expected Polygon3D, but got {type(point)}."
         )
 
+    if tol is not None:
+        if not isinstance(tol, (float, int)):
+            raise TypeError(
+                f"Unexpected type for tol. Expected float, but got {type(tol)}."
+            )
+        if not tol >= 0:
+            raise ValueError(f"tol must be >= 0, but got {tol}.")
+
+    # Initialize tol
+    if tol is None:
+        tol = ABS_TOL
+
     # Check whether the point is inside the projection of the polygon in the xy plane
-    if not polygon.shapely_polygon_xy_plane.contains(point.shapely_point_xy_plane):
+    if not polygon.shapely_polygon_xy_plane.contains(
+        point.shapely_point_xy_plane
+    ) and not polygon.shapely_polygon_xy_plane.intersects(
+        point.shapely_point_xy_plane.buffer(distance=tol)
+    ):
         return None
 
     # Make plane using first three points of the polygon.
@@ -68,16 +91,3 @@ def project_vertically_point_onto_polygon_3d(
         z = point.z
 
     return Point3D(x=point.x, y=point.y, z=z)
-
-
-def get_convex_hull_vertices_3d(points: List[Point3D]) -> List[Point3D]:
-    convex_hull = spatial.ConvexHull(
-        points=np.vstack([point.coordinates for point in points])
-    )
-
-    vertices = []
-    for vertix_index in convex_hull.vertices:
-        vertix = convex_hull.points[vertix_index]
-        vertices.append(Point3D(x=vertix[0], y=vertix[1], z=vertix[2]))
-
-    return vertices

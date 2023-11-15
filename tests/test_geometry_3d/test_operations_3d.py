@@ -45,3 +45,10 @@ def test_project_vertically_point_onto_polygon_3d() -> None:
         point=Point3D(x=0.5, y=0.5, z=5.0),
         polygon=Polygon3D(coordinates=[(0, 0, 0), (1, 0, 1), (1, 1, 1), (0, 1, 0)]),
     ).coordinates == (0.5, 0.5, 0.5)
+
+    # Assert it returns the expected point when enough tolerance is provided.
+    assert project_vertically_point_onto_polygon_3d(
+        point=Point3D(x=-0.5, y=-0.5, z=5.0),
+        polygon=Polygon3D(coordinates=[(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]),
+        tol=0.8,
+    ).coordinates == (-0.5, -0.5, 0)
