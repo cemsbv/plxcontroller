@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+from plxscripting.easy import new_server
 from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server
 
 from plxcontroller.geometry_3d.bounding_box_3d import BoundingBox3D
+from plxcontroller.geometry_3d.convex_hull_3d import ConvexHull3D
 from plxcontroller.geometry_3d.operations_3d import (
     project_vertically_point_onto_polygon_3d,
 )
 from plxcontroller.geometry_3d.point_3d import Point3D
 from plxcontroller.geometry_3d.polygon_3d import Polygon3D
+from plxcontroller.plaxis_3d_output_controller import Plaxis3DOutputController
 
 
 class Plaxis3DInputController:
@@ -22,6 +25,7 @@ class Plaxis3DInputController:
         """
         self.server = server
         self._plaxis_volumes_bounding_boxes: Dict[PlxProxyObject, BoundingBox3D] = {}
+        self._convex_hull_per_cut_volume: Dict[PlxProxyObject, ConvexHull3D] = {}
 
     @property
     def s_i(self) -> Server:
@@ -37,6 +41,11 @@ class Plaxis3DInputController:
     def plaxis_volumes_bounding_boxes(self) -> Dict[PlxProxyObject, BoundingBox3D]:
         """Returns the mapping between the plaxis volumes and their corresponding bounding boxes."""
         return self._plaxis_volumes_bounding_boxes
+
+    @property
+    def convex_hull_per_cut_volume(self) -> Dict[PlxProxyObject, ConvexHull3D]:
+        """Returns the convex hull per cut volume object."""
+        return self._convex_hull_per_cut_volume
 
     def filter_volumes_above_polygons(
         self,
@@ -133,3 +142,59 @@ class Plaxis3DInputController:
                     break
 
         return filtered_plaxis_volumes
+
+    def map_convex_hull_per_cut_volume(self) -> None:
+        """Maps the convex hull for each cut volume of the Plaxis model
+        and stores it in the dictionary `self.convex_hull_per_cut_volume`.
+
+        A cut volume is defined as any Volume or SoilVolume in Mesh, FlowConditions
+        and StagedConstruction tabs.
+
+        Note that the convex hulls are mapped based on the mesh nodes of the model,
+        which means:
+            - This method requires that the mesh is already generated, otherwise
+            an error is raised.
+            - The mesh must be up-to-date with the input geometry to get
+            correct results (but this is not checked by this method).
+            - The Plaxis output program is opened (but closing should be done manually).
+
+        The user should take care that the generated mesh is up-to-date with
+        the inputs, otherwise
+        This method assumes that the generated mesh is up-to-date with the
+        geometry model in structures.
+
+
+        Raises
+        ------
+            ValueError: if the mesh is not yet generated for the Plaxis model.
+        """
+        # Initialize a Plaxis3DOutput controller to get the information
+        # about nodes per cut volume
+        self.g_i.gotomesh()
+        try:
+            port = self.g_i.viewmesh()
+        except Exception as e:
+            raise ValueError(
+                "Cannot map the convex hull per cut volume, the following error occurred "
+                + f"when requesting to view the mesh: {e}"
+            )
+
+        server, _ = new_server(
+            self.server.connection.host, port, password=self.server.connection._password
+        )
+        co = Plaxis3DOutputController(server)
+
+        # Get nodes per cut volume
+        nodes_per_cut_volume = co.get_nodes_per_cut_volume()
+        # Close the output project (Plaxis 3D program keeps open)
+        co.s_o.close()
+
+        # Get convex hull per cut volume
+        self.g_i.gotostages()
+        self._convex_hull_per_cut_volume = {}
+        for cut_volume in list(
+            set(list(self.g_i.SoilVolumes) + list(self.g_i.Volumes))
+        ):
+            self._convex_hull_per_cut_volume[cut_volume] = ConvexHull3D(
+                points=nodes_per_cut_volume[cut_volume.Name.value]
+            )
