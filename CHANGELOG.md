@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2023-11-15
+
+### Features
+
+- *(#28)* Add method to map convex hulls per cut volume in Plaxis3DOutputController.
+- *(#27)* Add class ConvexHull3D.
+- *(#22)* Add method to get nodes per cut volume in Plaxis3DOutputController.
+- *(#25)* Add class Node3D.
+- *(#21)* Add class Plaxis3DOutputController.
+
 ## [0.3.0] - 2023-11-10
 
 ### Bug Fixes
