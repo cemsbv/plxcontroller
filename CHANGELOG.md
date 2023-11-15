@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2023-11-15
+
+### Features
+
+- *(#29)* [**breaking**] Improve method `filter_cut_volumes_above_polygons` to consider all the vertices of the cut_volumes, instead of only the centroid of the bounding box.
+
 ## [0.4.0] - 2023-11-15
 
 ### Features
