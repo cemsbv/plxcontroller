@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2023-11-16
+
+### Features
+
+- *(#33)* Fix method `get_nodes_per_cut_volume` to consider all volumes in Plaxis3DOutputController.
+
 ## [0.5.0] - 2023-11-15
 
 ### Features
