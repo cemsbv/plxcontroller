@@ -41,7 +41,7 @@ class Plaxis3DOutputController:
         """
         # Map all nodes per soil volume
         nodes_per_cut_volume = {}
-        for volume in self.g_o.Volumes:
+        for volume in list(set(list(self.g_o.SoilVolumes) + list(self.g_o.Volumes))):
             # Volumes deepest level (cutted in Mesh, present also in Stages)
             for cut_volume in volume:
                 # Request x, y and z values
