@@ -267,7 +267,7 @@ class Plaxis3DInputController:
         # Method should be only called in Mesh, FlowConditions and StagedConstruction.
         if not 2 <= self.g_i.Project.Mode.value <= 4:
             raise ValueError(
-                "Method filter_cut_volumes_above_polygons can only be called in Mesh, "
+                "Method filter_cut_volumes_below_polygons can only be called in Mesh, "
                 + "FlowConditions and StagedConstruction."
             )
 
@@ -319,7 +319,7 @@ class Plaxis3DInputController:
         if any(a not in self.convex_hull_per_cut_volume for a in cut_volumes):
             self.map_convex_hull_per_cut_volume()
 
-        # Filter the volumes if it is above any of the polygons
+        # Filter the volumes if it is below any of the polygons
         filtered_cut_volumes = []
         for cut_volume in cut_volumes:
             # Get the convex hull corresponding to the cut volume
@@ -343,6 +343,139 @@ class Plaxis3DInputController:
                 if all(checks):
                     filtered_cut_volumes.append(cut_volume)
                     break
+
+        return filtered_cut_volumes
+
+    def filter_cut_volumes_by_name_criteria(
+        self,
+        name_contains: List[str] | None = None,
+        name_not_contains: List[str] | None = None,
+        cut_volumes: List[PlxProxyObject] | None = None,
+    ) -> List[PlxProxyObject]:
+        """Filters the given cut volumes if their name contains any string given
+        in `name_contains` list or does not contain any string given in the
+        `name_not_contains` list.
+
+        A cut volume is defined as any Volume or SoilVolume in Mesh, FlowConditions
+        and StagedConstruction tabs of the plaxis model.
+
+        Parameters
+        ----------
+        name_contains: List[str] | None, optional
+            the list of strings that the cut volume must contain.
+            If None is given, then this filter is skipped.
+            Defaults to None.
+        name_not_contains: List[str] | None, optional
+            the list of strings that the cut volume must not contain.
+            If None is given, then this filter is skipped.
+            Defaults to None.
+        cut_volumes : List[PlxProxyObject] | None, optional
+            the list of plaxis volumes to filter from.
+            If None is given then all the cut volumes in the model are used.
+            Defaults to None.
+
+        Returns
+        -------
+        List[PlxProxyObject]
+            the filtered cut volumes.
+
+        Raises
+        ------
+        TypeError
+            if parameters are not of the expected type.
+        ValueError
+            - if this method is not called in modes Mesh, FlowConditions and StagedConstruction.
+            - if both `name_contains` and `name_not_contains` are None.
+            - if `name_contains` or `name_not_contains` are empty lists.
+            - if any item of cut_volumes is not present in the Volumes nor SoilVolumes of the plaxis model.
+        """
+
+        # Method should be only called in Mesh, FlowConditions and StagedConstruction.
+        if not 2 <= self.g_i.Project.Mode.value <= 4:
+            raise ValueError(
+                "Method filter_cut_volumes_by_name_criteria can only be called in Mesh, "
+                + "FlowConditions and StagedConstruction."
+            )
+
+        # Validate input
+        if name_contains is None and name_not_contains is None:
+            raise ValueError(
+                "Both name_contains and name_not_contains are None. "
+                + "This is unexcepted because method will always return an empty list."
+            )
+
+        if name_contains is not None:
+            if not isinstance(name_contains, list):
+                raise TypeError(
+                    f"Unexpected type for name_contains. Expected list or None, but got {type(name_contains)}."
+                )
+
+            if not len(name_contains) > 0:
+                raise ValueError("name_contains must be a non-empty list.")
+
+            for i, item in enumerate(name_contains):
+                if not isinstance(item, str):
+                    raise TypeError(
+                        f"Unexpected type for item {i} of name_contains. Expected str, but got {type(item)}."
+                    )
+
+        if name_not_contains is not None:
+            if not isinstance(name_not_contains, list):
+                raise TypeError(
+                    f"Unexpected type for name_not_contains. Expected list or None, but got {type(name_not_contains)}."
+                )
+
+            if not len(name_not_contains) > 0:
+                raise ValueError("name_not_contains must be a non-empty list.")
+
+            for i, item in enumerate(name_not_contains):
+                if not isinstance(item, str):
+                    raise TypeError(
+                        f"Unexpected type for item {i} of name_not_contains. Expected str, but got {type(item)}."
+                    )
+
+        if cut_volumes is not None:
+            if not isinstance(cut_volumes, list):
+                raise TypeError(
+                    f"Unexpected type for cut_volumes. Expected list, but got {type(cut_volumes)}."
+                )
+            for i, cut_volume in enumerate(cut_volumes):
+                if not isinstance(cut_volume, PlxProxyObject):
+                    raise TypeError(
+                        f"Unexpected type for item {i} of cut_volumes. Expected PlxProxyObject, but got {type(cut_volume)}."
+                    )
+                if cut_volume not in list(
+                    set(list(self.g_i.SoilVolumes) + list(self.g_i.Volumes))
+                ):
+                    raise ValueError(
+                        f"Item {i} of cut_volumes is not present in the volumes of the plaxis model."
+                    )
+
+        # Initialize plaxis_volume list as all the volumes in the Plaxis model.
+        if cut_volumes is None:
+            cut_volumes = list(set(list(self.g_i.SoilVolumes) + list(self.g_i.Volumes)))
+
+        # Filter the volumes if it is above any of the polygons
+        filtered_cut_volumes = []
+        for cut_volume in cut_volumes:
+            # Filter by name_contains
+            if isinstance(name_contains, list):
+                match_found = False
+                for item in name_contains:
+                    if item in cut_volume.Name.value:
+                        filtered_cut_volumes.append(cut_volume)
+                        match_found = True
+                        break
+
+            if match_found:
+                continue
+
+            # Filter by name_not_contains
+            if isinstance(name_not_contains, list):
+                for item in name_not_contains:
+                    if item not in cut_volume.Name.value:
+                        filtered_cut_volumes.append(cut_volume)
+                        break
 
         return filtered_cut_volumes
 
