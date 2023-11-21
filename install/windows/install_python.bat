@@ -20,7 +20,10 @@ curl https://www.python.org/ftp/python/%python_version%/python-%python_version%-
 
 Rem Install python
 mkdir %python_installation_dir%\python-%python_version%
-python-%python_version%-amd64.exe TargetDir=%python_installation_dir%\python-%python_version% PrependPath=1
+python-%python_version%-amd64.exe TargetDir=%python_installation_dir%\python-%python_version% AppendPath=1
+
+
+
 
 
 

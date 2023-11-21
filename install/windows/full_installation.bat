@@ -1,24 +1,46 @@
 @echo off
 setlocal enableDelayedExpansion
 
-Rem 1. Download and install python
-call install_python 3.9.13 C:\cems-python
+set python_installation_dir=C:\cems-python
+set python_version=3.9.13
+set plxcontroller_notebook_dir=C:\cems-notebooks\plxcontroller
+set kernel_name=plxcontroller-env
 
-Rem 2. Install jupyter lab
-call install_jupyterlab
 
-Rem 3. Set-up notebook directory
-call setup_notebook_dir C:\cems-notebooks\plxcontroller
+echo 1. Download and install python
+if not defined CEMS_PYTHON_DIR (
+    call install_python %python_version% %python_installation_dir%
+    Rem Set the system environmental variables of the location of the new installation
+    setx CEMS_PYTHON_DIR %python_installation_dir%\python-%python_version%
+    Rem Set it also locally so that it can be accessed without reloading cmd.
+    set CEMS_PYTHON_DIR %python_installation_dir%\python-%python_version%
+) else (
+    echo Python is not downloaded and installed, because environmental variable CEMS_PYTHON_DIR is defined. 
+    echo %CEMS_PYTHON_DIR%\python.exe will be used as base to create the python virtual environment. 
+)
 
-Rem 4. Create python environment
-call create_python_env C:\cems-notebooks\plxcontroller\.env
+echo 2. Install jupyter lab
+call install_jupyterlab %CEMS_PYTHON_DIR%\python.exe
 
-Rem 5. Register python environment in ipykernel
-call register_env_ipykernel C:\cems-notebooks\plxcontroller\.env "plxcontroller-env"
+echo 3. Set-up notebook directory
+call setup_notebook_dir %plxcontroller_notebook_dir%
 
-Rem 6. Install plxcontroller
-call install_plxcontroller C:\cems-notebooks\plxcontroller\.env
+echo 4. Create python environment
+if not exist %plxcontroller_notebook_dir%\.env\Scripts\python.exe (
+    call create_python_env %CEMS_PYTHON_DIR%\python.exe %plxcontroller_notebook_dir%\.env
+) else (
+    echo Python virtual environment at %plxcontroller_notebook_dir%\.env will be used, no new one is created.
+)
 
-Rem 7. Update plxcontroller (so that the sample notebooks are downloaded)
-cd C:\cems-notebooks\plxcontroller
-call update_plxcontroller
+echo 5. Register python environment in ipykernel
+call register_env_ipykernel %plxcontroller_notebook_dir%\.env "%kernel_name%"
+
+echo 6. Install plxcontroller
+call install_plxcontroller %plxcontroller_notebook_dir%\.env
+
+echo 7. Download sample notebooks
+cd /D %plxcontroller_notebook_dir%
+call download_sample_notebooks
+
+echo Installation finished!
+cmd /k

@@ -2,18 +2,15 @@
 setlocal enableDelayedExpansion
 
 Rem Parse input variables
-set notebooks_installation_dir=%1
-Rem C:\cems-notebooks\plxcontroller
-echo notebooks_installation_dir is %notebooks_installation_dir% and no more.
+set plxcontroller_notebook_dir=%1
 
 Rem Create notebook installation dir and add batch file 
-mkdir %notebooks_installation_dir% %notebooks_installation_dir%\sample
+mkdir %plxcontroller_notebook_dir% 
+Rem mkdir %plxcontroller_notebook_dir%\sample
 
-Rem Copy sample notebooks (old)
-Rem xcopy sample %notebooks_installation_dir%\sample
-
-Rem Copy batch file "start_jupyter_lab"
-copy start_jupyter_lab.bat %notebooks_installation_dir%
-copy update_plxcontroller.bat %notebooks_installation_dir%
+Rem Copy batch files "start_jupyter_lab", "update_plxcontroller", "download_sample_notebooks"
+copy start_jupyter_lab.bat %plxcontroller_notebook_dir%
+copy update_plxcontroller.bat %plxcontroller_notebook_dir%
+copy download_sample_notebooks.bat %plxcontroller_notebook_dir%
 
 

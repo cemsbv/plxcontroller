@@ -3,15 +3,12 @@ setlocal enableDelayedExpansion
 
 set current_dir_path=%~dp0
 
-jupyter lab --notebook-dir=%current_dir_path% --preferred-dir %current_dir_path%
+if not defined CEMS_PYTHON_DIR (
+    echo Environmental variable CEMS_PYTHON_DIR does not exists, jupyterlab cannot be started.
+    cmd /k
+)
 
-Rem Parse input variables
-Rem set notebooks_installation_dir=%1
-Rem C:\cems-notebooks\plxcontroller
-Rem echo notebooks_installation_dir is %notebooks_installation_dir% and no more.
-
-Rem Create notebook installation dir and add batch file 
-Rem mkdir %notebooks_installation_dir% %notebooks_installation_dir%\sample
+%CEMS_PYTHON_DIR%\python -m jupyter lab --notebook-dir=%current_dir_path% --preferred-dir %current_dir_path%
 
 
 
