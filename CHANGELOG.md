@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2023-11-21
+
+### Features
+
+- *(#41)* Add the environmental variable CEMS_PYTHON_DIR to be used in the installation scripts. Make the installation script also reusable for update.
+- *(#41)* Add first version of the install scripts for windows.
+- *(#37)* Add method to filter cut volumes by name criteria.
+- *(#36)* Add method to filter cut volumes below polygons.
+
+### Miscellaneous Tasks
+
+- *(#35)* Loop through unique cut volumes in method `get_nodes_per_cut_volume`.
+
 ## [0.5.1] - 2023-11-16
 
 ### Features
