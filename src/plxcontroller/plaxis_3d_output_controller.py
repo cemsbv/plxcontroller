@@ -39,32 +39,37 @@ class Plaxis3DOutputController:
             the dictionary with all the nodes per cut volume in the following
             format {cut_volume_name: points}
         """
-        # Map all nodes per soil volume
-        nodes_per_cut_volume = {}
+        # Get set of cut volumes
+        cut_volumes = set()
         for volume in list(set(list(self.g_o.SoilVolumes) + list(self.g_o.Volumes))):
             # Volumes deepest level (cutted in Mesh, present also in Stages)
             for cut_volume in volume:
-                # Request x, y and z values
-                plaxis_xs = self.g_o.getresults(
-                    cut_volume, self.g_o.ResultTypes.Soil.X, "node", False
-                )
-                plaxis_ys = self.g_o.getresults(
-                    cut_volume, self.g_o.ResultTypes.Soil.Y, "node", False
-                )
-                plaxis_zs = self.g_o.getresults(
-                    cut_volume, self.g_o.ResultTypes.Soil.Z, "node", False
-                )
-                # Map PlxValues to List[float] (this is time consuming)
-                xs = list(map(float, plaxis_xs))
-                ys = list(map(float, plaxis_ys))
-                zs = list(map(float, plaxis_zs))
-                # Make a set of the coordinates
-                coordinates_set = set()
-                for x, y, z in zip(xs, ys, zs):
-                    coordinates_set.add((x, y, z))
-                # Store the coordinates as points
-                nodes_per_cut_volume[cut_volume.Name.value] = [
-                    Point3D(x=c[0], y=c[1], z=c[2]) for c in list(coordinates_set)
-                ]
+                cut_volumes.add(cut_volume)
+
+        # Map all nodes per soil volume
+        nodes_per_cut_volume = {}
+        for cut_volume in list(cut_volumes):
+            # Request x, y and z values
+            plaxis_xs = self.g_o.getresults(
+                cut_volume, self.g_o.ResultTypes.Soil.X, "node", False
+            )
+            plaxis_ys = self.g_o.getresults(
+                cut_volume, self.g_o.ResultTypes.Soil.Y, "node", False
+            )
+            plaxis_zs = self.g_o.getresults(
+                cut_volume, self.g_o.ResultTypes.Soil.Z, "node", False
+            )
+            # Map PlxValues to List[float] (this is time consuming)
+            xs = list(map(float, plaxis_xs))
+            ys = list(map(float, plaxis_ys))
+            zs = list(map(float, plaxis_zs))
+            # Make a set of the coordinates
+            coordinates_set = set()
+            for x, y, z in zip(xs, ys, zs):
+                coordinates_set.add((x, y, z))
+            # Store the coordinates as points
+            nodes_per_cut_volume[cut_volume.Name.value] = [
+                Point3D(x=c[0], y=c[1], z=c[2]) for c in list(coordinates_set)
+            ]
 
         return nodes_per_cut_volume
