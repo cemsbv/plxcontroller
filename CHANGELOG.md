@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1] - 2023-11-22
+
+### Features
+
+- *(#43)* Add readme to installation windows.
+
 ## [0.6.0] - 2023-11-21
 
 ### Features
