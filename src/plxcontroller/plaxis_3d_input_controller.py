@@ -354,7 +354,7 @@ class Plaxis3DInputController:
     ) -> List[PlxProxyObject]:
         """Filters the given cut volumes if their name contains any string given
         in `name_contains` list or does not contain any string given in the
-        `name_not_contains` list.
+        `name_not_contains` list. Note that the comparison is not case sensitive.
 
         A cut volume is defined as any Volume or SoilVolume in Mesh, FlowConditions
         and StagedConstruction tabs of the plaxis model.
@@ -455,14 +455,14 @@ class Plaxis3DInputController:
         if cut_volumes is None:
             cut_volumes = list(set(list(self.g_i.SoilVolumes) + list(self.g_i.Volumes)))
 
-        # Filter the volumes if it is above any of the polygons
+        # Filter the volumes
         filtered_cut_volumes = []
         for cut_volume in cut_volumes:
             # Filter by name_contains
             if isinstance(name_contains, list):
                 match_found = False
                 for item in name_contains:
-                    if item in cut_volume.Name.value:
+                    if item.lower() in cut_volume.Name.value.lower():
                         filtered_cut_volumes.append(cut_volume)
                         match_found = True
                         break
@@ -473,7 +473,7 @@ class Plaxis3DInputController:
             # Filter by name_not_contains
             if isinstance(name_not_contains, list):
                 for item in name_not_contains:
-                    if item not in cut_volume.Name.value:
+                    if item.lower() not in cut_volume.Name.value.lower():
                         filtered_cut_volumes.append(cut_volume)
                         break
 
