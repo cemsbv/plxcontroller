@@ -38,21 +38,25 @@ class Plaxis2DOutputController:
             Plaxis2DOutputController: the Plaxis2DOutputController instance.
         """
 
-        plaxis_path = os.getenv("PLAXIS_2D_PROGRAM_PATH")
+        plaxis_path = os.getenv("PLAXIS_2D_OUTPUT_PROGRAM")
         if not plaxis_path:
-            raise ValueError("PLAXIS 2D program path is not set.")
+            raise ValueError(
+                'Environmental variable "PLAXIS_2D_OUTPUT_PROGRAM" is not set.'
+            )
         if not os.path.exists(plaxis_path):
-            raise ValueError(f"PLAXIS 2D program path {plaxis_path} does not exist.")
+            raise ValueError(
+                f'PLAXIS 2D Output program path "{plaxis_path}" does not exist.'
+            )
 
         password = os.getenv("PLAXIS_2D_PASSWORD")
         if not password:
-            raise ValueError("PLAXIS 2D password is not set.")
+            raise ValueError('Environmental variable "PLAXIS_2D_PASSWORD" is not set.')
 
         # Create subprocess
         self._subprocess = subprocess.Popen(
             [
                 plaxis_path,
-                f"--AppServerPort={ip_address}",
+                f"--AppServerPort={port}",
                 f"--AppServerPassword={password}",
             ],
         )
