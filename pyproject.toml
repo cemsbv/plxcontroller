@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "plxcontroller"
-version = "0.6.1"
+version = "0.7.0"
 description = "Controllers to create and modify Plaxis 2D and 3D models with enhanced functionalities."
 requires-python = ">=3.9"
 dependencies = [
