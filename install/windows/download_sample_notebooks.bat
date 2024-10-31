@@ -2,6 +2,7 @@
 setlocal enableDelayedExpansion
 
 mkdir sample
+curl --output-dir sample -O https://raw.githubusercontent.com/cemsbv/plxcontroller/main/notebooks/Plaxis2D_output_controller.ipynb
 curl --output-dir sample -O https://raw.githubusercontent.com/cemsbv/plxcontroller/main/notebooks/Plaxis3D_input_controller.ipynb
 curl --output-dir sample -O https://raw.githubusercontent.com/cemsbv/plxcontroller/main/notebooks/Plaxis3D_output_controller.ipynb
 curl --output-dir sample -O https://raw.githubusercontent.com/cemsbv/plxcontroller/main/notebooks/image.png
