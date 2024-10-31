@@ -7,9 +7,9 @@ from plxscripting.plxproxy import PlxProxyGlobalObject
 from plxscripting.server import Server, new_server
 
 
-class Plaxis2DOutputController:
+class Plaxis2DInputController:
     def __init__(self) -> None:
-        """Creates a new Plaxis2DOutputController instance."""
+        """Creates a new Plaxis2DInputController instance."""
         self._server: Server | None = None
         self._subprocess: subprocess.Popen | None = None
         self._filepath: str | None = None
@@ -26,19 +26,19 @@ class Plaxis2DOutputController:
             return self._server.plx_global
         return None
 
-    def connect(self, ip_address: str = "localhost", port: int = 10001) -> None:
+    def connect(self, ip_address: str = "localhost", port: int = 10000) -> None:
         """Starts a new Plaxis instance and a new server connection with the given IP address and port and
         connect to it.
 
         Args:
             ip_address (str): the IP address of the Plaxis server. Defaults to "localhost".
-            port (int, optional): the port to of the Plaxis server. Defaults to 10001.
+            port (int, optional): the port to of the Plaxis server. Defaults to 10000.
         """
 
-        plaxis_path = os.getenv("PLAXIS_2D_OUTPUT_PROGRAM")
+        plaxis_path = os.getenv("PLAXIS_2D_INPUT_PROGRAM")
         if not plaxis_path:
             raise ValueError(
-                'Environmental variable "PLAXIS_2D_OUTPUT_PROGRAM" is not set.'
+                'Environmental variable "PLAXIS_2D_INPUT_PROGRAM" is not set.'
             )
         if not os.path.exists(plaxis_path):
             raise ValueError(
@@ -88,7 +88,7 @@ class Plaxis2DOutputController:
         """Disconnect from the PLAXIS server."""
 
         if self._subprocess is not None and self._subprocess.stdin is not None:
-            plaxis_path = os.getenv("PLAXIS_2D_OUTPUT_PROGRAM")
+            plaxis_path = os.getenv("PLAXIS_2D_INPUT_PROGRAM")
             if isinstance(plaxis_path, str):
                 self._subprocess.stdin.write(f"taskkill /IM {plaxis_path}\n".encode())
             self._subprocess.terminate()
