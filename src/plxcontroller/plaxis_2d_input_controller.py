@@ -15,14 +15,14 @@ class Plaxis2DInputController:
         self._filepath: str | None = None
 
     @property
-    def s_o(self) -> Server | None:
+    def s_i(self) -> Server | None:
         """Returns the server object. This is a typical alias for the server object."""
         return self._server
 
     @property
-    def g_o(self) -> PlxProxyGlobalObject | None:
+    def g_i(self) -> PlxProxyGlobalObject | None:
         """Returns the global project object. This is a typical alias for the global project object."""
-        if isinstance(self._server, PlxProxyGlobalObject):
+        if isinstance(self._server, Server):
             return self._server.plx_global
         return None
 

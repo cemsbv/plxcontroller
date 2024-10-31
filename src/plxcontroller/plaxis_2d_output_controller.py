@@ -22,7 +22,7 @@ class Plaxis2DOutputController:
     @property
     def g_o(self) -> PlxProxyGlobalObject | None:
         """Returns the global project object. This is a typical alias for the global project object."""
-        if isinstance(self._server, PlxProxyGlobalObject):
+        if isinstance(self._server, Server):
             return self._server.plx_global
         return None
 
