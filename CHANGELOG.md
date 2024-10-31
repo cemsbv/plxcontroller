@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2024-10-31
+
+### Bug Fixes
+
+- *(plaxis_2d)* Set the correct port in method connect Plaxis2DOutputController and correct the name of the environmental variables
+
 ## [0.7.0] - 2024-10-31
 
 ### Features
