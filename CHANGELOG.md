@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2024-10-31
+
+### Bug Fixes
+
+- *(plaxis_2d)* Fix the return of the plaxis global object
+
 ## [0.8.0] - 2024-10-31
 
 ### Features
