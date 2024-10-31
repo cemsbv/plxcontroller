@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2024-10-31
+
+### Features
+
+- *(plaxis_2d)* Add Plaxis2DInputController
+
 ## [0.7.1] - 2024-10-31
 
 ### Bug Fixes
