@@ -52,7 +52,7 @@ iniconfig==2.0.0
     # via pytest
 ipykernel==6.26.0
     # via plxscripting
-ipython==8.11.0
+ipython==8.21.0
     # via
     #   black
     #   ipykernel
