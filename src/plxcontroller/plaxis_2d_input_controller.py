@@ -26,37 +26,46 @@ class Plaxis2DInputController:
             return self._server.plx_global
         return None
 
-    def connect(self, ip_address: str = "localhost", port: int = 10000) -> None:
+    def connect(
+        self,
+        ip_address: str = "localhost",
+        port: int = 10000,
+        is_server_running: bool = False,
+    ) -> None:
         """Starts a new Plaxis instance and a new server connection with the given IP address and port and
         connect to it.
 
         Args:
             ip_address (str): the IP address of the Plaxis server. Defaults to "localhost".
             port (int, optional): the port to of the Plaxis server. Defaults to 10000.
+            is_server_running (bool, optional): whether the Plaxis server is already running. If True,
+            then the server will be started as a separate subprocess. Otherwise, the server will be started.
+            Defaults to False.
         """
-
-        plaxis_path = os.getenv("PLAXIS_2D_INPUT_PROGRAM")
-        if not plaxis_path:
-            raise ValueError(
-                'Environmental variable "PLAXIS_2D_INPUT_PROGRAM" is not set.'
-            )
-        if not os.path.exists(plaxis_path):
-            raise ValueError(
-                f'PLAXIS 2D Output program path "{plaxis_path}" does not exist.'
-            )
-
         password = os.getenv("PLAXIS_2D_PASSWORD")
         if not password:
             raise ValueError('Environmental variable "PLAXIS_2D_PASSWORD" is not set.')
 
-        # Create subprocess
-        self._subprocess = subprocess.Popen(
-            [
-                plaxis_path,
-                f"--AppServerPort={port}",
-                f"--AppServerPassword={password}",
-            ],
-        )
+        # Create subprocess if the server is not running
+        self._subprocess = None
+        if not is_server_running:
+            plaxis_path = os.getenv("PLAXIS_2D_INPUT_PROGRAM")
+            if not plaxis_path:
+                raise ValueError(
+                    'Environmental variable "PLAXIS_2D_INPUT_PROGRAM" is not set.'
+                )
+            if not os.path.exists(plaxis_path):
+                raise ValueError(
+                    f'PLAXIS 2D Output program path "{plaxis_path}" does not exist.'
+                )
+
+            self._subprocess = subprocess.Popen(
+                [
+                    plaxis_path,
+                    f"--AppServerPort={port}",
+                    f"--AppServerPassword={password}",
+                ],
+            )
 
         # Connect to PLAXIS remote server
         server, _ = new_server(ip_address, port, password=password)
