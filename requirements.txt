@@ -142,7 +142,7 @@ pycodestyle==2.10.0
     # via
     #   flake8
     #   plxcontroller (pyproject.toml)
-pycryptodome==3.19.0
+pycryptodome==3.19.1
     # via plxscripting
 pyflakes==3.0.1
     # via
