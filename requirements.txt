@@ -162,7 +162,7 @@ pyzmq==25.1.1
     # via
     #   ipykernel
     #   jupyter-client
-requests==2.31.0
+requests==2.32.4
     # via
     #   coveralls
     #   plxscripting
