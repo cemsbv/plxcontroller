@@ -186,7 +186,7 @@ tomli==2.0.1
     #   mypy
     #   plxcontroller (pyproject.toml)
     #   pytest
-tornado==6.3.3
+tornado==6.5.5
     # via
     #   ipykernel
     #   jupyter-client
