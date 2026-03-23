@@ -127,8 +127,6 @@ class Plaxis2DInputController:
                 )
 
         # Go to mesh and start PLAXIS output program
-        print("--------------------------")
-        print("Node and stresspoint selection")
         self.g_i.gotomesh()
         output_server_port = self.g_i.selectmeshpoints()
 
