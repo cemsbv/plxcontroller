@@ -165,8 +165,8 @@ class Plaxis2DInputController:
                         co.g_o.set(plaxis_stress_point.Identification, point.name)
                         co.g_o.rename(plaxis_stress_point, point.name)
 
-        # Update and save
-        co.g_o.update()
+        # # Update and save
+        # co.g_o.update()
 
         print("Selected points sucessfully!!")
 
