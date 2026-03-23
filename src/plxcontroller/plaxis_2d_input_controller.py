@@ -151,7 +151,8 @@ class Plaxis2DInputController:
                         f"Requested node: (x={point.x:.3f}, y={point.y:.3f} -> Selected node: (x={plaxis_node.x.value:.3f}, y={plaxis_node.y.value:.3f})"
                     )
                     if isinstance(point.name, str):
-                        co.g_o.rename(plaxis_node.name, point.name)
+                        co.g_o.set(plaxis_node.Identification, point.name)
+                        co.g_o.rename(plaxis_node, point.name)
                 else:
                     plaxis_stress_point = co.g_o.addcurvepoint(
                         "stresspoint", point.x, point.y
@@ -161,7 +162,8 @@ class Plaxis2DInputController:
                         + f"Selected stress point: (x={plaxis_stress_point.x.value:.3f}, y={plaxis_stress_point.y.value:.3f})"
                     )
                     if isinstance(point.name, str):
-                        co.g_o.rename(plaxis_stress_point.name, point.name)
+                        co.g_o.set(plaxis_stress_point.Identification, point.name)
+                        co.g_o.rename(plaxis_stress_point, point.name)
 
         # Update and save
         co.g_o.update()
