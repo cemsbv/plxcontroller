@@ -20,11 +20,11 @@ class Plaxis2DOutputController:
         return self._server
 
     @property
-    def g_o(self) -> PlxProxyGlobalObject | None:
+    def g_o(self) -> PlxProxyGlobalObject:
         """Returns the global project object. This is a typical alias for the global project object."""
-        if isinstance(self._server, Server):
-            return self._server.plx_global
-        return None
+        if not isinstance(self._server, Server):
+            raise ValueError("No server connection available.")
+        return self._server.plx_global
 
     def connect(self, ip_address: str = "localhost", port: int = 10001) -> None:
         """Starts a new Plaxis instance and a new server connection with the given IP address and port and

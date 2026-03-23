@@ -6,6 +6,9 @@ import subprocess
 from plxscripting.plxproxy import PlxProxyGlobalObject
 from plxscripting.server import Server, new_server
 
+from plxcontroller.plaxis_2d_output_controller import Plaxis2DOutputController
+from plxcontroller.precalculation_point_2d import PrecalculationPoint2D
+
 
 class Plaxis2DInputController:
     def __init__(self) -> None:
@@ -20,11 +23,11 @@ class Plaxis2DInputController:
         return self._server
 
     @property
-    def g_i(self) -> PlxProxyGlobalObject | None:
+    def g_i(self) -> PlxProxyGlobalObject:
         """Returns the global project object. This is a typical alias for the global project object."""
-        if isinstance(self._server, Server):
-            return self._server.plx_global
-        return None
+        if not isinstance(self._server, Server):
+            raise ValueError("No server connection available.")
+        return self._server.plx_global
 
     def connect(self, ip_address: str = "localhost", port: int = 10000) -> None:
         """Starts a new Plaxis instance and a new server connection with the given IP address and port and
@@ -70,7 +73,7 @@ class Plaxis2DInputController:
         Args:
             filepath (str): the path to the PLAXIS model file.
         """
-        if not self._server:
+        if not isinstance(self._server, Server):
             raise ValueError("No server connection available.")
 
         self._server.open(filepath)
@@ -78,7 +81,7 @@ class Plaxis2DInputController:
 
     def close(self) -> None:
         """Close the PLAXIS model file."""
-        if not self._server:
+        if not isinstance(self._server, Server):
             raise ValueError("No server connection available.")
 
         self._server.close()
@@ -96,3 +99,73 @@ class Plaxis2DInputController:
         self._server = None
         self._subprocess = None
         self._filepath = None
+
+    def select_precalculation_points(
+        self,
+        points: list[PrecalculationPoint2D],
+        delete_previously_selected: bool = True,
+    ) -> None:
+        """Select precalculation points in the PLAXIS model.
+
+        Parameters
+        ----------
+            points: list[PrecalculationPoint2D]
+                The precalculation points to select.
+                The nodes to select as precalculation points.
+            delete_previously_selected: bool, optional
+                Whether to delete previously selected points.
+                Defaults to True.
+        """
+        if not isinstance(self._server, Server):
+            raise ValueError("No server connection available.")
+
+        # Validate precalculation points
+        for point in points:
+            if not isinstance(point, PrecalculationPoint2D):
+                raise ValueError(
+                    f"Unexpected point type: {type(point)}. Expected PrecalculationPoint2D."
+                )
+
+        # Go to mesh and start PLAXIS output program
+        self.g_i.gotomesh()
+        output_server_port = self.g_i.selectmeshpoints()
+
+        co = Plaxis2DOutputController()
+        co.connect(
+            ip_address=self._server.connection.host,
+            port=output_server_port,
+        )
+
+        # Clear previously selected points (if applicable)
+        if delete_previously_selected:
+            co.g_o.clearcurvepoints()
+
+        # Add new points to the selection
+        if len(points) > 0:
+            for point in points:
+                if point.point_type == "node":
+                    plaxis_node = co.g_o.addcurvepoint("node", point.x, point.y)
+                    print(
+                        f"Requested node: (x={point.x:.3f}, y={point.y:.3f} -> Selected node: (x={plaxis_node.x.value:.3f}, y={plaxis_node.y.value:.3f})"
+                    )
+                    if isinstance(point.name, str):
+                        plaxis_node.Identification = point.name
+                        co.g_o.rename(plaxis_node, point.name)
+                else:
+                    plaxis_stress_point = co.g_o.addcurvepoint(
+                        "stresspoint", point.x, point.y
+                    )
+                    print(
+                        f"Requested stress point: (x={point.x:.3f}, y={point.y:.3f} -> "
+                        + f"Selected stress point: (x={plaxis_stress_point.x.value:.3f}, y={plaxis_stress_point.y.value:.3f})"
+                    )
+                    if isinstance(point.name, str):
+                        plaxis_stress_point.Identification = point.name
+                        co.g_o.rename(plaxis_stress_point, point.name)
+
+        # Update and save
+        co.g_o.update()
+
+        print("Selected points sucessfully!!")
+
+        return
