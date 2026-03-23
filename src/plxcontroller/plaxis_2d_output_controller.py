@@ -7,7 +7,6 @@ from typing import Literal
 from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server, new_server
 
-from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
 from plxcontroller.results_2d.point_time_history_result_2d import (
     PointTimeHistoryResult2D,
 )
