@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import os
 import subprocess
+from typing import Literal
 
-from plxscripting.plxproxy import PlxProxyGlobalObject
+from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server, new_server
+
+from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
+from plxcontroller.results_2d.point_time_history_result_2d import (
+    PointTimeHistoryResult2D,
+)
 
 
 class Plaxis2DOutputController:
@@ -13,6 +19,9 @@ class Plaxis2DOutputController:
         self._server: Server | None = None
         self._subprocess: subprocess.Popen | None = None
         self._filepath: str | None = None
+        self._precalculated_nodes: dict[str, PlxProxyObject] = {}
+        self._precalculated_stress_points: dict[str, PlxProxyObject] = {}
+        self._node_time_history_results: dict[str, list[PointTimeHistoryResult2D]] = {}
 
     @property
     def s_o(self) -> Server | None:
@@ -96,3 +105,199 @@ class Plaxis2DOutputController:
         self._server = None
         self._subprocess = None
         self._filepath = None
+        self._precalculated_nodes = {}
+        self._precalculated_stress_points = {}
+
+    def get_phase_number_from_phase_name(self, phase: PlxProxyObject) -> int:
+        """Get the phase number from the phase.
+
+        Parameters
+        ----------
+        phase : PlxProxyObject
+            the phase object.
+        Returns
+        -------
+        int
+            the number of the phase.
+        """
+        try:
+            return int(phase.Name.value.split("Phase_")[-1])
+        except ValueError:
+            raise ValueError(
+                f"Unexpected phase name: {phase.Name.value}. Expected to end with an integer after 'Phase_'."
+            )
+
+    def get_phase_from_phase_number(self, phase_number: int) -> PlxProxyObject:
+        """Get the phase object from the phase number.
+
+        Parameters
+        ----------
+        phase_number : int
+            the number of the phase.
+        Returns
+        -------
+        PlxProxyObject
+            the phase object.
+        """
+        try:
+            phase = getattr(self.g_o, f"Phase_{phase_number}")
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected phase number: {phase_number}. No such phase in PLAXIS model."
+            )
+        return phase
+
+    def get_step_from_step_number(self, step_number: int) -> PlxProxyObject:
+        """Get the step object from the step number.
+
+        Parameters
+        ----------
+        step_number : int
+            the number of the step.
+        Returns
+        -------
+        PlxProxyObject
+            the step object.
+        """
+        try:
+            step = getattr(self.g_o, f"Step_{step_number}")
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected step number: {step_number}. No such step in PLAXIS model."
+            )
+        return step
+
+    def get_result_type_from_string(self, result_type_str: str) -> PlxProxyObject:
+        """Get the PLAXIS result type from a string.
+
+        Parameters
+        ----------
+        result_type_str : str
+            the string representing the result type. Expected format is "Category.Result", e.g. "Soil.X".
+
+        Returns
+        -------
+        PlxProxyObject
+            the PLAXIS result type object.
+        """
+        if "." not in result_type_str:
+            raise ValueError(
+                f"Unexpected result type string: {result_type_str}. Expected format is 'Category.Result', e.g. 'Soil.X'."
+            )
+        category_str, result_str = result_type_str.split(".")
+        try:
+            category = getattr(self.g_o.ResultTypes, category_str)
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected result category: {category_str}. No such category in PLAXIS ResultTypes."
+            )
+        try:
+            result_type = getattr(category, result_str)
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected result type: {result_str}. No such result type in PLAXIS ResultTypes.{category_str}."
+            )
+        return result_type
+
+    def request_precalculated_points(
+        self, point_type: Literal["all", "node", "stresspoint"] = "all"
+    ) -> None:
+        """
+        Request and store the precalculated points (nodes and/or stress points) in the PLAXIS model
+        and store them in the controller instance.
+
+        Parameters
+        ----------
+        point_type : Literal["all", "node", "stresspoint"], optional
+            the type of points to request. If "all", both nodes and stress points are requested.
+            (default is "all").
+        """
+        # Nodes
+        if point_type in ["all", "node"]:
+            for node in self.g_o.Nodes:
+                self._precalculated_nodes[node.Name.value] = node
+
+        # Stress points
+        if point_type in ["all", "stresspoint"]:
+            for stress_point in self.g_o.StressPoints:
+                self._precalculated_stress_points[
+                    stress_point.Name.value
+                ] = stress_point
+
+        return
+
+    def request_node_time_history_results(
+        self, phase_number: int, result_type_names: list[str]
+    ) -> None:
+        """
+        Request and store the node time history results for a given phase number and result types in the PLAXIS model
+        and store them in the controller instance.
+
+        Parameters
+        ----------
+        phase_number : int
+            the number of the phase for which the results are requested.
+        result_type_names : list[str]
+            the list of result type names for which the results are requested. Expected format for each result
+            type name is "Category.Result", e.g. "Soil.X".
+        """
+        if not isinstance(self._server, Server):
+            raise ValueError("No server connection available.")
+
+        # Get plaxis objects from input
+        phase = self.get_phase_from_phase_number(phase_number)
+        phase_name = phase.Name.value
+        phase_identification = phase.Identification.value
+        result_types = [
+            self.get_result_type_from_string(result_type_name)
+            for result_type_name in result_type_names
+        ]
+
+        # Start input program to retrieve phase input data (this is much faster than retrieving it from the output program)
+        ci = Plaxis2DInputController()
+        ci.connect(
+            ip_address=self._server.connection.host,
+            port=self._server.connection.port - 1,  # TODO: improve this.
+        )
+
+        # Get step output
+        phase_input = ci.get_phase_from_phase_number(phase_number)
+        phase_start_step = phase_input.FirstStep.value
+        phase_end_step = phase_input.LastStep.value
+        step_output = list(range(phase_start_step, phase_end_step + 1, 1))
+
+        # Get step number to step object mapping
+        step_number_to_step = {}
+        for step_number in step_output:
+            step_number_to_step[step_number] = self.get_step_from_step_number(
+                step_number
+            )
+
+        # Get time output
+        time_output = []
+        for step_number in step_output:
+            time_output.append(step_number_to_step[step_number].Reached.Time.value)
+
+        # Request and store results in the controller instance
+        for node in self.g_o.Nodes:
+            # Request for each result type
+            for result_type_name, result_type in zip(result_type_names, result_types):
+                result = list(
+                    self.g_o.getcurveresultspath(
+                        node, phase, step_number_to_step[phase_end_step], result_type
+                    )
+                )
+                # Store the results in the controller instance
+                self._node_time_history_results.setdefault(node.Name.value, []).append(
+                    PointTimeHistoryResult2D(
+                        point=node,
+                        phase_name=phase_name,
+                        phase_identification=phase_identification,
+                        step=step_output,
+                        time=time_output,
+                        value=result,
+                        result_type=result_type_name,
+                    )
+                )
+
+        return

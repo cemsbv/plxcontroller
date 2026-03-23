@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 
-from plxscripting.plxproxy import PlxProxyGlobalObject
+from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server, new_server
 
 from plxcontroller.plaxis_2d_output_controller import Plaxis2DOutputController
@@ -169,3 +169,23 @@ class Plaxis2DInputController:
         print("Selected points sucessfully!!")
 
         return
+
+    def get_phase_from_phase_number(self, phase_number: int) -> PlxProxyObject:
+        """Get the phase object from the phase number.
+
+        Parameters
+        ----------
+        phase_number : int
+            the number of the phase.
+        Returns
+        -------
+        PlxProxyObject
+            the phase object.
+        """
+        try:
+            phase = getattr(self.g_i, f"Phase_{phase_number}")
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected phase number: {phase_number}. No such phase in PLAXIS model."
+            )
+        return phase
