@@ -152,6 +152,7 @@ class Plaxis2DInputController:
                     )
                     if isinstance(point.name, str):
                         # co.g_o.set(plaxis_node.Identification, point.name)
+                        print(f"Node name: {plaxis_node.Name.value}, Node ID: {plaxis_node.Identification.value}")
                         plaxis_node.Identification = point.name
                         co.g_o.rename(plaxis_node.name, point.name)
                 else:
