@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-03-23
+
+### Bug Fixes
+
+- *(precalc-points)* Fix select precalculation points
+- *(precalculation-point)* Fix type hint in precalculation point
+
+### Features
+
+- *(precalc-points)* Rename precalc points attempt 2
+- *(precalc-points)* Remove update and save
+- *(precalc-points)* Rename the precalculation points
+- *(precalc-points)* Rename the precalculation points
+- *(install-windows)* Add download of Plaxis2D_input_controller notebook
+- *(precalculation-points)* Add method to select precalculation points to Plaxis2DInputController
+
+### Miscellaneous Tasks
+
+- *(precalc-points)* Remove unnecessary print statements
+- *(precalc-points)* Print node name
+
 ## [0.8.1] - 2024-10-31
 
 ### Bug Fixes
@@ -79,6 +100,7 @@ All notable changes to this project will be documented in this file.
 ### Bug Fixes
 
 - *(#17)* Fix of formula to calculate the z-coordinate of plane at x,y coordinates.
+- *(#1)* Fix issue with tests not using any module from plxcontroller.
 
 ### Features
 
@@ -86,22 +108,13 @@ All notable changes to this project will be documented in this file.
 - *(#15)* Add method to project point3d onto polygon3d.
 - *(#13)* Add class Polygon3D.
 - *(#11)* Add classes BoundingBox3D and Point3D
+- *(#1)* Add files according to version 0.1.0.
 
 ### Lint
 
 - *(#15)* Exclude numpy missing imports from mypy.
 - *(#13)* Fix lint to ignore the missing imports from the package skspatial.
 - *(#11)* Fix linting in bounding_box_3d.
-
-## [0.1.0] - 2023-11-09
-
-### Bug Fixes
-
-- *(#1)* Fix issue with tests not using any module from plxcontroller.
-
-### Features
-
-- *(#1)* Add files according to version 0.1.0.
 
 ### Update
 
