@@ -242,6 +242,8 @@ class Plaxis2DOutputController:
         """
         if not isinstance(self._server, Server):
             raise ValueError("No server connection available.")
+        if not isinstance(self._filepath, str):
+            raise ValueError("No PLAXIS model file is currently open.")
 
         # Get plaxis objects from input
         phase = self.get_phase_from_phase_number(phase_number)
@@ -252,16 +254,18 @@ class Plaxis2DOutputController:
             for result_type_name in result_type_names
         ]
 
-        # Start input program to retrieve phase input data (this is much faster than retrieving it from the output program)
-        s_i, g_i = new_server(
+        # Start input program to retrieve phase input data
+        from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
+
+        ci = Plaxis2DInputController()
+        ci.connect(
             ip_address=self._server.connection.host,
-            port=self._server.connection.port,
-            password=self._server.connection.password
+            port=self._server.connection.port + 1,  # TODO: improve this
         )
-        s_i.open(self._filepath)
+        ci.open(self._filepath)
 
         # Get step output
-        phase_input = getattr(g_i, f"Phase_{phase_number}")
+        phase_input = ci.get_phase_from_phase_number(phase_number)
         phase_start_step = phase_input.FirstStep.value
         phase_end_step = phase_input.LastStep.value
         step_output = list(range(phase_start_step, phase_end_step + 1, 1))
