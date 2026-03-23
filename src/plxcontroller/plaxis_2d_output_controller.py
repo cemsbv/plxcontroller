@@ -254,14 +254,15 @@ class Plaxis2DOutputController:
         ]
 
         # Start input program to retrieve phase input data (this is much faster than retrieving it from the output program)
-        ci = Plaxis2DInputController()
-        ci.connect(
+        s_i, g_i = new_server(
             ip_address=self._server.connection.host,
-            port=self._server.connection.port - 1,  # TODO: improve this.
+            port=self._server.connection.port,
+            password=self._server.connection.password
         )
+        s_i.open(self._filepath)
 
         # Get step output
-        phase_input = ci.get_phase_from_phase_number(phase_number)
+        phase_input = getattr(g_i, f"Phase_{phase_number}")
         phase_start_step = phase_input.FirstStep.value
         phase_end_step = phase_input.LastStep.value
         step_output = list(range(phase_start_step, phase_end_step + 1, 1))
