@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2026-03-23
+
+### Deploy
+
+- *(pypi)* Update to pypi upload artifact to v4
+
 ## [0.9.0] - 2026-03-23
 
 ### Bug Fixes
