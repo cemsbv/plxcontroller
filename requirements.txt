@@ -93,6 +93,7 @@ numpy==1.26.1
     # via
     #   contourpy
     #   matplotlib
+    #   pandas
     #   pandas-stubs
     #   plxcontroller (pyproject.toml)
     #   scikit-spatial
@@ -105,6 +106,8 @@ packaging==23.2
     #   matplotlib
     #   plxcontroller (pyproject.toml)
     #   pytest
+pandas==2.3.3
+    # via plxcontroller (pyproject.toml)
 pandas-stubs==2.1.1.230928
     # via plxcontroller (pyproject.toml)
 parso==0.8.3
@@ -158,6 +161,9 @@ python-dateutil==2.8.2
     # via
     #   jupyter-client
     #   matplotlib
+    #   pandas
+pytz==2026.1.post1
+    # via pandas
 pyzmq==25.1.1
     # via
     #   ipykernel
@@ -207,6 +213,8 @@ typing-extensions==4.7.1
     #   black
     #   mypy
     #   plxcontroller (pyproject.toml)
+tzdata==2025.3
+    # via pandas
 urllib3==2.0.7
     # via requests
 wcwidth==0.2.9
