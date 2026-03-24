@@ -7,9 +7,11 @@ from typing import Literal
 from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server, new_server
 
-from plxcontroller.precalculation_point_2d import PrecalculationPoint2D
 from plxcontroller.results_2d.point_time_history_result_2d import (
-    PointTimeHistoryResult2D,
+    MultiPhaseMultiPointTimeHistoryResult2D,
+    SinglePhaseMultiPointTimeHistoryResult2D,
+    SinglePhaseSinglePointTimeHistoryResult2D,
+    SinglePointTimeHistoryResult2D,
 )
 
 
@@ -21,7 +23,9 @@ class Plaxis2DOutputController:
         self._filepath: str | None = None
         self._precalculated_nodes: dict[str, PlxProxyObject] = {}
         self._precalculated_stress_points: dict[str, PlxProxyObject] = {}
-        self._node_time_history_results: dict[str, list[PointTimeHistoryResult2D]] = {}
+        self._node_time_history_results: dict[
+            str, list[SinglePhaseSinglePointTimeHistoryResult2D]
+        ] = {}
 
     @property
     def s_o(self) -> Server | None:
@@ -226,11 +230,11 @@ class Plaxis2DOutputController:
 
         return
 
-    def request_node_time_history_results(
+    def get_node_time_history_results(
         self, phase_numbers: list[int], result_type_names: list[str]
-    ) -> None:
+    ) -> MultiPhaseMultiPointTimeHistoryResult2D:
         """
-        Request and store the node time history results for the given phase numbers and result types in the PLAXIS model
+        Get the node time history results for the given phase numbers and result types in the PLAXIS model
         and store them in the controller instance.
 
         Parameters
@@ -292,51 +296,63 @@ class Plaxis2DOutputController:
         ci.close()
         ci.disconnect()
 
-        # Parse all the precalculated points
-        plaxis_nodes = list(self.g_o.Nodes)
-        precalculated_nodes = [
-            PrecalculationPoint2D.from_plaxis_node(node) for node in plaxis_nodes
-        ]
-
         # Request for each phase
+        multi_phase_multi_point_results = MultiPhaseMultiPointTimeHistoryResult2D()
         for phase_number, phase in zip(phase_numbers, phases):
             phase_name = phase.Name.value
             phase_identification = phase.Identification.value
+            single_phase_multi_point_results = SinglePhaseMultiPointTimeHistoryResult2D(
+                phase_name=phase_name,
+                phase_identification=phase_identification,
+            )
             # Request for each node
-            for precalculated_node, plaxis_node in zip(
-                precalculated_nodes, plaxis_nodes
-            ):
+            for node in self.g_o.Nodes:
+                single_phase_single_point_results = (
+                    SinglePhaseSinglePointTimeHistoryResult2D(
+                        phase_name=phase_name,
+                        phase_identification=phase_identification,
+                        point_name=node.Name.value,
+                        point_type="node",
+                        point_x=node.X.value,
+                        point_y=node.Y.value,
+                        step=step_numbers_per_phase[phase_number],
+                        time=time_numbers_per_phase[phase_number],
+                    )
+                )
                 # Request for each result type
                 for result_type_name, result_type in zip(
                     result_type_names, result_types
                 ):
                     result = list(
                         self.g_o.getcurveresultspath(
-                            plaxis_node,
+                            node,
                             phase,
                             step_number_to_step[phase_end_step],
                             result_type,
                         )
                     )
-                    # Store the results in the controller instance
-                    self._node_time_history_results.setdefault(
-                        plaxis_node.Name.value, []
-                    ).append(
-                        PointTimeHistoryResult2D(
-                            point=precalculated_node,
-                            phase_name=phase_name,
-                            phase_identification=phase_identification,
-                            step=step_numbers_per_phase[phase_number],
-                            time=time_numbers_per_phase[phase_number],
-                            value=result,
+                    # Add result to single point and phase result
+                    single_phase_single_point_results.add_result(
+                        SinglePointTimeHistoryResult2D(
                             result_type=result_type_name,
+                            value=result,
                         )
                     )
+                # Add point result
+                single_phase_multi_point_results.add_point_result(
+                    point_result=single_phase_single_point_results
+                )
+            # Add phase result
+            multi_phase_multi_point_results.add_phase_result(
+                phase_result=single_phase_multi_point_results
+            )
 
-        return
+        return multi_phase_multi_point_results
 
     @property
-    def node_time_history_results(self) -> dict[str, list[PointTimeHistoryResult2D]]:
+    def node_time_history_results(
+        self,
+    ) -> dict[str, list[SinglePhaseSinglePointTimeHistoryResult2D]]:
         """Returns the node time history results stored in the controller instance.
 
         Returns
