@@ -311,6 +311,7 @@ class Plaxis2DOutputController:
                         phase_name=phase_name,
                         phase_identification=phase_identification,
                         point_name=node.Name.value,
+                        point_identification=node.Identification.value,
                         point_type="node",
                         point_x=node.x.value,
                         point_y=node.y.value,

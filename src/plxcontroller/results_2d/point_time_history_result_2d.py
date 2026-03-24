@@ -19,6 +19,7 @@ class SinglePhaseSinglePointTimeHistoryResult2D:
     phase_name: str
     phase_identification: str
     point_name: str
+    point_identification: str
     point_type: str
     point_x: float
     point_y: float
@@ -109,6 +110,7 @@ class MultiPhaseMultiPointTimeHistoryResult2D:
                 for i in range(len(point_result.step)):
                     record = {
                         "point_name": point_result.point_name,
+                        "point_identification": point_result.point_identification,
                         "point_type": point_result.point_type,
                         "x": point_result.point_x,
                         "y": point_result.point_y,

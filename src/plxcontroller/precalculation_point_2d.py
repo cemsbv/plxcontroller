@@ -13,7 +13,7 @@ class PrecalculationPoint2D:
     x: float
     y: float
     point_type: Literal["node", "stresspoint"] = "node"
-    name: str | None = None
+    identification: str | None = None
 
     def __post_init__(self) -> None:
         # Validate point type
@@ -29,5 +29,5 @@ class PrecalculationPoint2D:
             x=plaxis_node.x.value,
             y=plaxis_node.y.value,
             point_type="node",
-            name=plaxis_node.Name.value,
+            identification=plaxis_node.Identification.value,
         )
