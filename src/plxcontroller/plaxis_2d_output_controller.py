@@ -273,7 +273,7 @@ class Plaxis2DOutputController:
         # Get step output and the step number to step object mapping for the given phase number
         step_number_to_step = {}
         step_numbers_per_phase = {}
-        time_numbers_per_phase = {}
+        time_per_phase = {}
         for phase_number in phase_numbers:
             # Get first and last step number of the phase
             phase_input = ci.get_phase_from_phase_number(phase_number)
@@ -284,13 +284,12 @@ class Plaxis2DOutputController:
                 range(phase_start_step, phase_end_step + 1, 1)
             )
             # Get time output and the step number mapping
+            time = []
             for step_number in step_numbers_per_phase[phase_number]:
-                step_number_to_step[step_number] = self.get_step_from_step_number(
-                    step_number
-                )
-                time_numbers_per_phase[phase_number] = step_number_to_step[
-                    step_number
-                ].Reached.Time.value
+                step = self.get_step_from_step_number(step_number)
+                step_number_to_step[step_number] = step
+                time.append(step.Reached.Time.value)
+            time_per_phase[phase_number] = time
 
         # Close the input program and disconnect
         ci.close()
@@ -316,7 +315,7 @@ class Plaxis2DOutputController:
                         point_x=node.x.value,
                         point_y=node.y.value,
                         step=step_numbers_per_phase[phase_number],
-                        time=time_numbers_per_phase[phase_number],
+                        time=time_per_phase[phase_number],
                     )
                 )
                 # Request for each result type
