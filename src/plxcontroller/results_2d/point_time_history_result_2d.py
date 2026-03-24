@@ -52,11 +52,11 @@ class SinglePhaseMultiPointTimeHistoryResult2D:
         self, point_result: SinglePhaseSinglePointTimeHistoryResult2D
     ) -> None:
         """Add a point result."""
-        # Check if the phase result already exists for the same phase name
-        for existing_phase_result in self.point_results:
-            if existing_phase_result.phase_name == point_result.phase_name:
+        # Check if the point result already exists for the same point name
+        for existing_point_result in self.point_results:
+            if existing_point_result.point_name == point_result.point_name:
                 raise ValueError(
-                    f"Phase result with name '{point_result.phase_name}' already exists for point '{point_result.point_name}'."
+                    f"Point result with name '{point_result.point_name}' already exists for phase '{point_result.phase_name}'."
                 )
         self.point_results.append(point_result)
 
