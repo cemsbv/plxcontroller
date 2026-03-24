@@ -43,7 +43,9 @@ class SinglePhaseMultiPointTimeHistoryResult2D:
 
     phase_name: str
     phase_identification: str
-    point_results: list[SinglePhaseSinglePointTimeHistoryResult2D] = field(default_factory=list)
+    point_results: list[SinglePhaseSinglePointTimeHistoryResult2D] = field(
+        default_factory=list
+    )
 
     def add_point_result(
         self, point_result: SinglePhaseSinglePointTimeHistoryResult2D
@@ -73,7 +75,9 @@ class SinglePhaseMultiPointTimeHistoryResult2D:
 class MultiPhaseMultiPointTimeHistoryResult2D:
     """Class representing a point time history result in a 2D PLAXIS model for multiple points, phases and result types."""
 
-    phases_results: list[SinglePhaseMultiPointTimeHistoryResult2D] = field(default_factory=list)
+    phases_results: list[SinglePhaseMultiPointTimeHistoryResult2D] = field(
+        default_factory=list
+    )
 
     @property
     def point_names(self) -> list[str]:
