@@ -313,8 +313,8 @@ class Plaxis2DOutputController:
                         phase_identification=phase_identification,
                         point_name=node.Name.value,
                         point_type="node",
-                        point_x=node.X.value,
-                        point_y=node.Y.value,
+                        point_x=node.x.value,
+                        point_y=node.y.value,
                         step=step_numbers_per_phase[phase_number],
                         time=time_numbers_per_phase[phase_number],
                     )
