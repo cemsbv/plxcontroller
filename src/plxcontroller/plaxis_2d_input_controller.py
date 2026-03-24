@@ -146,11 +146,10 @@ class Plaxis2DInputController:
                 if point.point_type == "node":
                     plaxis_node = co.g_o.addcurvepoint("node", point.x, point.y)
                     print(
-                        f"Requested node: (x={point.x:.3f}, y={point.y:.3f} -> Selected node: (x={plaxis_node.x.value:.3f}, y={plaxis_node.y.value:.3f})"
+                        f"Requested node: (x={point.x:.3f}, y={point.y:.3f}) -> Selected node: (x={plaxis_node.x.value:.3f}, y={plaxis_node.y.value:.3f})"
                     )
-                    if isinstance(point.name, str):
-                        plaxis_node.Identification = point.name
-                        co.g_o.rename(plaxis_node, point.name)
+                    if isinstance(point.identification, str):
+                        plaxis_node.Identification = point.identification
                 else:
                     plaxis_stress_point = co.g_o.addcurvepoint(
                         "stresspoint", point.x, point.y
@@ -159,9 +158,8 @@ class Plaxis2DInputController:
                         f"Requested stress point: (x={point.x:.3f}, y={point.y:.3f} -> "
                         + f"Selected stress point: (x={plaxis_stress_point.x.value:.3f}, y={plaxis_stress_point.y.value:.3f})"
                     )
-                    if isinstance(point.name, str):
-                        plaxis_stress_point.Identification = point.name
-                        co.g_o.rename(plaxis_stress_point, point.name)
+                    if isinstance(point.identification, str):
+                        plaxis_stress_point.Identification = point.identification
 
         # Update and save
         co.g_o.update()
