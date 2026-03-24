@@ -97,6 +97,7 @@ class Plaxis2DOutputController:
         self._server.close()
         self._filepath = None
 
+    # TODO: deprecate this function
     def disconnect(self) -> None:
         """Disconnect from the PLAXIS server."""
 
@@ -106,6 +107,16 @@ class Plaxis2DOutputController:
                 self._subprocess.stdin.write(f"taskkill /IM {plaxis_path}\n".encode())
             self._subprocess.terminate()
 
+        self._server = None
+        self._subprocess = None
+        self._filepath = None
+        self._precalculated_nodes = {}
+        self._precalculated_stress_points = {}
+
+    def kill(self) -> None:
+        """Kill the PLAXIS process and disconnect from the server."""
+        if self._subprocess is not None:
+            self._subprocess.kill()
         self._server = None
         self._subprocess = None
         self._filepath = None
@@ -291,9 +302,9 @@ class Plaxis2DOutputController:
                 time.append(step.Reached.Time.value)
             time_per_phase[phase_number] = time
 
-        # Close the input program and disconnect
+        # Close the input program and kill the subprocess with the server host
         ci.close()
-        ci.disconnect()
+        ci.kill()
 
         # Request for each phase
         multi_phase_multi_point_results = MultiPhaseMultiPointTimeHistoryResult2D()
