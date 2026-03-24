@@ -7,6 +7,7 @@ from typing import Literal
 from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server, new_server
 
+from plxcontroller.precalculation_point_2d import PrecalculationPoint2D
 from plxcontroller.results_2d.point_time_history_result_2d import (
     PointTimeHistoryResult2D,
 )
@@ -226,16 +227,16 @@ class Plaxis2DOutputController:
         return
 
     def request_node_time_history_results(
-        self, phase_number: int, result_type_names: list[str]
+        self, phase_numbers: list[int], result_type_names: list[str]
     ) -> None:
         """
-        Request and store the node time history results for a given phase number and result types in the PLAXIS model
+        Request and store the node time history results for the given phase numbers and result types in the PLAXIS model
         and store them in the controller instance.
 
         Parameters
         ----------
-        phase_number : int
-            the number of the phase for which the results are requested.
+        phase_numbers : list[int]
+            the numbers of the phases for which the results are requested.
         result_type_names : list[str]
             the list of result type names for which the results are requested. Expected format for each result
             type name is "Category.Result", e.g. "Soil.X".
@@ -246,9 +247,10 @@ class Plaxis2DOutputController:
             raise ValueError("No PLAXIS model file is currently open.")
 
         # Get plaxis objects from input
-        phase = self.get_phase_from_phase_number(phase_number)
-        phase_name = phase.Name.value
-        phase_identification = phase.Identification.value
+        phases = [
+            self.get_phase_from_phase_number(phase_number)
+            for phase_number in phase_numbers
+        ]
         result_types = [
             self.get_result_type_from_string(result_type_name)
             for result_type_name in result_type_names
@@ -264,44 +266,82 @@ class Plaxis2DOutputController:
         )
         ci.open(self._filepath)
 
-        # Get step output
-        phase_input = ci.get_phase_from_phase_number(phase_number)
-        phase_start_step = phase_input.FirstStep.value
-        phase_end_step = phase_input.LastStep.value
-        step_output = list(range(phase_start_step, phase_end_step + 1, 1))
-
-        # Get step number to step object mapping
+        # Get step output and the step number to step object mapping for the given phase number
         step_number_to_step = {}
-        for step_number in step_output:
-            step_number_to_step[step_number] = self.get_step_from_step_number(
-                step_number
+        step_numbers_per_phase = {}
+        time_numbers_per_phase = {}
+        for phase_number in phase_numbers:
+            # Get first and last step number of the phase
+            phase_input = ci.get_phase_from_phase_number(phase_number)
+            phase_start_step = phase_input.FirstStep.value
+            phase_end_step = phase_input.LastStep.value
+            # Generate step output for the phase
+            step_numbers_per_phase[phase_number] = list(
+                range(phase_start_step, phase_end_step + 1, 1)
             )
-
-        # Get time output
-        time_output = []
-        for step_number in step_output:
-            time_output.append(step_number_to_step[step_number].Reached.Time.value)
-
-        # Request and store results in the controller instance
-        for node in self.g_o.Nodes:
-            # Request for each result type
-            for result_type_name, result_type in zip(result_type_names, result_types):
-                result = list(
-                    self.g_o.getcurveresultspath(
-                        node, phase, step_number_to_step[phase_end_step], result_type
-                    )
+            # Get time output and the step number mapping
+            for step_number in step_numbers_per_phase[phase_number]:
+                step_number_to_step[step_number] = self.get_step_from_step_number(
+                    step_number
                 )
-                # Store the results in the controller instance
-                self._node_time_history_results.setdefault(node.Name.value, []).append(
-                    PointTimeHistoryResult2D(
-                        point=node,
-                        phase_name=phase_name,
-                        phase_identification=phase_identification,
-                        step=step_output,
-                        time=time_output,
-                        value=result,
-                        result_type=result_type_name,
+                time_numbers_per_phase[phase_number] = step_number_to_step[
+                    step_number
+                ].Reached.Time.value
+
+        # Close the input program and disconnect
+        ci.close()
+        ci.disconnect()
+
+        # Parse all the precalculated points
+        plaxis_nodes = list(self.g_o.Nodes)
+        precalculated_nodes = [
+            PrecalculationPoint2D.from_plaxis_node(node) for node in plaxis_nodes
+        ]
+
+        # Request for each phase
+        for phase_number, phase in zip(phase_numbers, phases):
+            phase_name = phase.Name.value
+            phase_identification = phase.Identification.value
+            # Request for each node
+            for precalculated_node, plaxis_node in zip(
+                precalculated_nodes, plaxis_nodes
+            ):
+                # Request for each result type
+                for result_type_name, result_type in zip(
+                    result_type_names, result_types
+                ):
+                    result = list(
+                        self.g_o.getcurveresultspath(
+                            plaxis_node,
+                            phase,
+                            step_number_to_step[phase_end_step],
+                            result_type,
+                        )
                     )
-                )
+                    # Store the results in the controller instance
+                    self._node_time_history_results.setdefault(
+                        plaxis_node.Name.value, []
+                    ).append(
+                        PointTimeHistoryResult2D(
+                            point=precalculated_node,
+                            phase_name=phase_name,
+                            phase_identification=phase_identification,
+                            step=step_numbers_per_phase[phase_number],
+                            time=time_numbers_per_phase[phase_number],
+                            value=result,
+                            result_type=result_type_name,
+                        )
+                    )
 
         return
+
+    @property
+    def node_time_history_results(self) -> dict[str, list[PointTimeHistoryResult2D]]:
+        """Returns the node time history results stored in the controller instance.
+
+        Returns
+        -------
+        dict[str, list[PointTimeHistoryResult2D]]
+            the node time history results stored in the controller instance, in the format {node_name: [results]}.
+        """
+        return self._node_time_history_results

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from plxscripting.plxproxy import PlxProxyObject
+
 
 @dataclass(frozen=True)
 class PrecalculationPoint2D:
@@ -19,3 +21,13 @@ class PrecalculationPoint2D:
             raise ValueError(
                 f"Unexpected point type: {self.point_type}. Expected 'node' or 'stresspoint'."
             )
+
+    @classmethod
+    def from_plaxis_node(cls, plaxis_node: PlxProxyObject) -> PrecalculationPoint2D:
+        """Create a PrecalculationPoint2D instance from a PLAXIS node object."""
+        return cls(
+            x=plaxis_node.x.value,
+            y=plaxis_node.y.value,
+            point_type="node",
+            name=plaxis_node.Name.value,
+        )
