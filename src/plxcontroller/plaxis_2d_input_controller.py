@@ -87,6 +87,7 @@ class Plaxis2DInputController:
         self._server.close()
         self._filepath = None
 
+    # TODO: deprecate this function
     def disconnect(self) -> None:
         """Disconnect from the PLAXIS server."""
 
@@ -96,6 +97,14 @@ class Plaxis2DInputController:
                 self._subprocess.stdin.write(f"taskkill /IM {plaxis_path}\n".encode())
             self._subprocess.terminate()
 
+        self._server = None
+        self._subprocess = None
+        self._filepath = None
+
+    def kill(self) -> None:
+        """Kill the PLAXIS process and disconnect from the server."""
+        if self._subprocess is not None:
+            self._subprocess.kill()
         self._server = None
         self._subprocess = None
         self._filepath = None
@@ -163,6 +172,7 @@ class Plaxis2DInputController:
 
         # Update and save
         co.g_o.update()
+        co.kill()
 
         print("Selected points sucessfully!!")
 
@@ -187,3 +197,11 @@ class Plaxis2DInputController:
                 f"Unexpected phase number: {phase_number}. No such phase in PLAXIS model."
             )
         return phase
+
+    def recalculate_all_phases(self) -> None:
+        """Recalculate all phases in the PLAXIS model."""
+        self.g_i.gotostages()
+        for phase in self.g_i.Phases:
+            phase.ShouldCalculate = True
+        self.g_i.calculate()
+        self.g_i.save()
