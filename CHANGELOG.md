@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2026-03-24
+
+### Bug Fixes
+
+- *(time-history)* Fix method add_point_result to check the point name
+- *(point-time-history)* Use default factory to initialize list in dataclasses
+- *(time-history)* Fix parse of time_per_phase
+- *(time-history)* Fix circular imports
+- *(time-history)* Fix get node x and y coordinates
+- *(time-history)* Fix circular imports
+
+### Features
+
+- *(kill-subprocess)* Add function to kill subprocess with server host
+- *(notebook)* Add get time history results to output controller
+- *(time-history)* Add method to request node time history results
+
+### Miscellaneous Tasks
+
+- *(dependencies)* Add pandas to dependencies
+- *(time-history)* Remove unused file
+
+### Refactor
+
+- *(precalculation-point)* Refactor precalculation point to change identification only and not name of the points
+- *(node-time-history)* Refactor the method get_node_time_history_results
+- *(2d-out)* Refactor method request node time history to accept multiple phases
+- *(time-history)* Refactor request node time history to use local import
+
 ## [0.9.1] - 2026-03-23
 
 ### Deploy
