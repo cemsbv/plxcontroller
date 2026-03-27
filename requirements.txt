@@ -215,7 +215,7 @@ typing-extensions==4.7.1
     #   plxcontroller (pyproject.toml)
 tzdata==2025.3
     # via pandas
-urllib3==2.0.7
+urllib3==2.6.3
     # via requests
 wcwidth==0.2.9
     # via prompt-toolkit
