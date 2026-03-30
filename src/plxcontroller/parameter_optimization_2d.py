@@ -25,6 +25,7 @@ class MeasuredValueAtPoint:
     value: float
     point_type: Literal["node", "stresspoint"] = "node"
     weight: float = 1.0
+    relative_to_point: str | None = None
 
     def __post_init__(self) -> None:
         if self.point_type not in ("node", "stresspoint"):
@@ -34,16 +35,20 @@ class MeasuredValueAtPoint:
 
 
 @dataclass(frozen=True)
-class MaterialParameterBounds:
+class MaterialParameterInput:
     material_identification: str
     parameter_name: str
+    initial_value: float
     min_value: float | None = None
     max_value: float | None = None
+    dependent_parameters: list[DependentParameter] | None = None  # List of ParameterDependency instances
 
     def __post_init__(self) -> None:
         if self.min_value is not None and self.max_value is not None:
             if self.min_value > self.max_value:
                 raise ValueError("min_value cannot be greater than max_value.")
+            if not self.min_value <= self.initial_value <= self.max_value:
+                raise ValueError("initial_value must be between min_value and max_value.")
 
 
 @dataclass(frozen=True)
@@ -54,12 +59,17 @@ class MaterialParameterValue:
 
 
 @dataclass(frozen=True)
-class MaterialParameterDependency:
-    material_identification: str
-    independent_parameter_name: str
-    dependent_parameter_name: str
+class DependentParameter:
+    name: str
+    """The name of the dependent parameter."""
     ratio: float
-
+    """The ratio of the dependent parameter value to the main parameter value.
+    For example, if the dependent parameter should be half of the main parameter, 
+    the ratio would be 0.5."""
+    
+    def __post_init__(self) -> None:
+        if self.ratio <= 0:
+            raise ValueError("Dependency ratio must be positive.")
 
 @dataclass(frozen=True)
 class OptimizationIterationResult:
@@ -185,15 +195,13 @@ class OptimizationIterationResult:
 class ParameterOptimization2D:
     def __init__(
         self,
-        input_controller: Plaxis2DInputController,
-        output_controller: Plaxis2DOutputController,
         model_path: str,
         ip_address: str = "localhost",
         input_port: int = 10000,
         output_port: int = 10001,
     ) -> None:
-        self._input_controller = input_controller
-        self._output_controller = output_controller
+        self._input_controller = Plaxis2DInputController()
+        self._output_controller = Plaxis2DOutputController()
         self._model_path = model_path
         self.ip_address = ip_address
         self.input_port = input_port
@@ -204,10 +212,7 @@ class ParameterOptimization2D:
         )
 
         self._measured_values: list[MeasuredValueAtPoint] | None = None
-        self._material_parameter_bounds: list[MaterialParameterBounds] | None = None
-        self._material_parameter_dependencies: list[
-            MaterialParameterDependency
-        ] | None = None
+        self._material_parameter_inputs: list[MaterialParameterInput] | None = None
 
         # Relevant for post-processing and logging during optimization
         self._iterations_directory = os.path.join(
@@ -215,6 +220,7 @@ class ParameterOptimization2D:
         )
         self._iteration_number = 0
         self._iteration_result_values: list[float] | None = None
+        self._save_intermediate_models = False
 
     @property
     def input_controller(self) -> Plaxis2DInputController:
@@ -256,6 +262,11 @@ class ParameterOptimization2D:
         """Returns the list of measured point results."""
         return self._measured_values
 
+    @measured_values.setter
+    def measured_values(self, measured_values: list[MeasuredValueAtPoint]) -> None:
+        """Sets the list of measured point results."""
+        self._measured_values = measured_values
+
     @property
     def unique_measured_nodes(self) -> set[str]:
         """Returns a set of unique measured node names."""
@@ -290,65 +301,53 @@ class ParameterOptimization2D:
         )
 
     @property
-    def material_parameter_bounds(self) -> list[MaterialParameterBounds] | None:
+    def material_parameter_inputs(self) -> list[MaterialParameterInput] | None:
         """Returns the list of material parameter bounds."""
-        return self._material_parameter_bounds
+        return self._material_parameter_inputs
 
-    @material_parameter_bounds.setter
-    def material_parameter_bounds(self, bounds: list[MaterialParameterBounds]) -> None:
+    @material_parameter_inputs.setter
+    def material_parameter_inputs(self, material_parameter_inputs: list[MaterialParameterInput]) -> None:
         """Sets the list of material parameter bounds."""
-        self._material_parameter_bounds = bounds
+        self._material_parameter_inputs = material_parameter_inputs
 
     @property
     def lower_bounds(self) -> list[float] | float:
-        """Returns a list of lower bounds for the material parameters, in the same order as self.material_parameter_bounds."""
-        if self.material_parameter_bounds is None:
+        """Returns a list of lower bounds for the material parameters, in the same order as self.material_parameter_inputs."""
+        if self.material_parameter_inputs is None:
             return -np.inf
         return [
             bound.min_value if bound.min_value is not None else -np.inf
-            for bound in self.material_parameter_bounds
+            for bound in self.material_parameter_inputs
         ]
 
     @property
     def upper_bounds(self) -> list[float] | float:
-        """Returns a list of upper bounds for the material parameters, in the same order as self.material_parameter_bounds."""
-        if self.material_parameter_bounds is None:
+        """Returns a list of upper bounds for the material parameters, in the same order as self.material_parameter_input."""
+        if self.material_parameter_inputs is None:
             return np.inf
         return [
             bound.max_value if bound.max_value is not None else np.inf
-            for bound in self.material_parameter_bounds
+            for bound in self.material_parameter_inputs
         ]
 
     @property
-    def material_parameter_dependencies(
-        self,
-    ) -> list[MaterialParameterDependency] | None:
-        """Returns the list of material parameter dependencies."""
-        return self._material_parameter_dependencies
+    def initial_values(self) -> list[float]:
+        """Returns a list of initial values for the material parameters, in the same order as self.material_parameter_input."""
+        if self.material_parameter_inputs is None:
+            raise ValueError("Material parameter input must be defined before accessing initial values.")
+        return [
+            input.initial_value for input in self.material_parameter_inputs
+        ]
 
-    @material_parameter_dependencies.setter
-    def material_parameter_dependencies(
-        self, dependencies: list[MaterialParameterDependency]
-    ) -> None:
-        """Sets the list of material parameter dependencies."""
-        # Check that all the independent parameters in the dependencies are present in the material parameter bounds
-        if self.material_parameter_bounds is None:
-            raise ValueError(
-                "Material parameter bounds must be defined before setting material parameter dependencies."
-            )
-        bounds_dict = {
-            (bound.material_identification, bound.parameter_name): bound
-            for bound in self.material_parameter_bounds
+    @property
+    def material_parameter_inputs_dictionary(self) -> dict[tuple[str, str], MaterialParameterInput] | None:
+        """Returns a dictionary mapping (material_identification, parameter_name) to MaterialParameterInput."""
+        if self.material_parameter_inputs is None:
+            return None
+        return {
+            (input.material_identification, input.parameter_name): input
+            for input in self.material_parameter_inputs
         }
-        for dependency in dependencies:
-            if (
-                dependency.material_identification,
-                dependency.independent_parameter_name,
-            ) not in bounds_dict:
-                raise ValueError(
-                    f"Independent parameter '{dependency.independent_parameter_name}' of material '{dependency.material_identification}' in dependency not found in material parameter bounds."
-                )
-        self._material_parameter_dependencies = dependencies
 
     def _create_optimization_model(self) -> None:
         """Creates the optimization model by copying the original model."""
@@ -415,7 +414,7 @@ class ParameterOptimization2D:
         list[MaterialParameterValue]
             A list of MaterialParameterValue objects representing the initial material parameter values.
         """
-        if self.material_parameter_bounds is None:
+        if self.material_parameter_inputs is None:
             raise ValueError(
                 "Material parameter bounds must be defined before getting material parameter values."
             )
@@ -430,7 +429,7 @@ class ParameterOptimization2D:
         materials_dict = self.ci.get_all_materials_by_identification()
 
         material_parameters = []
-        for material_parameter_bound in self.material_parameter_bounds:
+        for material_parameter_bound in self.material_parameter_inputs:
             material_name = material_parameter_bound.material_identification
             parameter_name = material_parameter_bound.parameter_name
 
@@ -468,24 +467,24 @@ class ParameterOptimization2D:
         ValueError
             If material parameter bounds are not defined or if a parameter has no defined bounds.
         """
-        if self.material_parameter_bounds is None:
+        if self.material_parameter_inputs is None:
             raise ValueError(
                 "Material parameter bounds must be defined before checking parameter values."
             )
 
-        bounds_dict = {
+        inputs_dict = {
             (bound.material_identification, bound.parameter_name): bound
-            for bound in self.material_parameter_bounds
+            for bound in self.material_parameter_inputs
         }
 
         for param in material_parameters:
             key = (param.material_identification, param.parameter_name)
-            if key not in bounds_dict:
+            if key not in inputs_dict:
                 raise ValueError(
                     f"No bounds defined for material '{param.material_identification}' and parameter '{param.parameter_name}'."
                 )
 
-            bound = bounds_dict[key]
+            bound = inputs_dict[key]
             if (bound.min_value is not None and param.value < bound.min_value) or (
                 bound.max_value is not None and param.value > bound.max_value
             ):
@@ -527,18 +526,18 @@ class ParameterOptimization2D:
         list[MaterialParameterValue]
             A list of MaterialParameterValue objects corresponding to the input values.
         """
-        if self.material_parameter_bounds is None:
+        if self.material_parameter_inputs is None:
             raise ValueError(
                 "Material parameter bounds must be defined before converting numerical values to material parameter values."
             )
 
-        if len(values) != len(self.material_parameter_bounds):
+        if len(values) != len(self.material_parameter_inputs):
             raise ValueError(
-                f"The number of input values ({len(values)}) must match the number of material parameter bounds ({len(self.material_parameter_bounds)})."
+                f"The number of input values ({len(values)}) must match the number of material parameter bounds ({len(self.material_parameter_inputs)})."
             )
 
         material_parameter_values = []
-        for value, bound in zip(values, self.material_parameter_bounds):
+        for value, bound in zip(values, self.material_parameter_inputs):
             material_parameter_values.append(
                 MaterialParameterValue(
                     material_identification=bound.material_identification,
@@ -562,51 +561,41 @@ class ParameterOptimization2D:
                 "Input controller is not connected to the optimization model. Please connect to the optimization model before changing material parameters."
             )
 
-        if self.material_parameter_bounds is None:
+        if self.material_parameter_inputs is None:
             raise ValueError(
                 "Material parameter bounds must be defined before updating material parameter values."
+            )
+
+        if len(self.material_parameter_inputs) != len(material_parameter_values):
+            raise ValueError(
+                f"The number of material parameter values ({len(material_parameter_values)}) must match the number of material parameter bounds ({len(self.material_parameter_inputs)})."
             )
 
         materials_dict = self.ci.get_all_materials_by_identification()
 
         # Update material parameter values in the model
-        for material_parameter in material_parameter_values:
+        for i, material_parameter in enumerate(material_parameter_values):
             if material_parameter.material_identification not in materials_dict:
                 raise ValueError(
                     f"Material '{material_parameter.material_identification}' not found in the model."
                 )
 
+            # Update the materialvalue
             self.ci.set_material_parameter_value(
                 material=materials_dict[material_parameter.material_identification],
                 parameter_name=material_parameter.parameter_name,
                 value=material_parameter.value,
             )
-
-        # Update dependent material parameter values
-        if self.material_parameter_dependencies is not None:
-            for dependency in self.material_parameter_dependencies:
-                if dependency.independent_parameter_name not in [
-                    param.parameter_name
-                    for param in material_parameter_values
-                    if param.material_identification
-                    == dependency.material_identification
-                ]:
-                    raise ValueError(
-                        f"Independent parameter '{dependency.independent_parameter_name}' of material '{dependency.material_identification}' in dependency not found in the provided material parameter values."
+            
+            # Update all the dependent parameters for this material parameter
+            material_parameter_input = self.material_parameter_inputs[i]
+            if material_parameter_input.dependent_parameters is not None:
+                for dependency in material_parameter_input.dependent_parameters:
+                    self.ci.set_material_parameter_value(
+                        material=materials_dict[material_parameter.material_identification],
+                        parameter_name=dependency.name,
+                        value=material_parameter.value * dependency.ratio,
                     )
-                independent_value = next(
-                    param.value
-                    for param in material_parameter_values
-                    if param.material_identification
-                    == dependency.material_identification
-                    and param.parameter_name == dependency.independent_parameter_name
-                )
-                dependent_value = independent_value * dependency.ratio
-                self.ci.set_material_parameter_value(
-                    material=materials_dict[dependency.material_identification],
-                    parameter_name=dependency.dependent_parameter_name,
-                    value=dependent_value,
-                )
 
     def get_results_at_measured_points(self) -> list[float]:
         """Retrieves the simulation results at the measured points.
@@ -751,7 +740,7 @@ class ParameterOptimization2D:
         return residuals
 
     def post_process_intermediate_result(
-        self, intermediate_result: OptimizeResult
+        self, intermediate_result: OptimizeResult,
     ) -> None:
         """
         Performs post-processing after each optimization iteration, such as saving the model with the current material parameter values and logging the results.
@@ -764,14 +753,15 @@ class ParameterOptimization2D:
         # Update iteration number
         self._iteration_number += 1
 
-        # Save the model with the current material parameter values
-        current_model_basename = os.path.basename(self.optimization_model_path)
-        self.ci.copy_current_model(
-            new_filepath=os.path.join(
-                self._iterations_directory,
-                f"iteration_{self._iteration_number}_{current_model_basename}.p2dx",
+        if self._save_intermediate_models:
+            # Save the model with the current material parameter values
+            current_model_basename = os.path.basename(self.optimization_model_path)
+            self.ci.copy_current_model(
+                new_filepath=os.path.join(
+                    self._iterations_directory,
+                    f"iteration_{self._iteration_number}_{current_model_basename}.p2dx",
+                )
             )
-        )
 
         # Create the optimization iteration result for post-processing and logging
         optimization_iteration_result = OptimizationIterationResult(
@@ -837,6 +827,7 @@ class ParameterOptimization2D:
         xtol: float = 1e-8,
         gtol: float = 1e-8,
         verbose: int = 2,
+        save_intermediate_models: bool = False,
     ) -> OptimizationIterationResult:
         """Performs the parameter optimization process."""
         # Check that measured values are defined
@@ -844,10 +835,17 @@ class ParameterOptimization2D:
             raise ValueError("Measured values must be defined before optimization.")
 
         # Check that material parameter bounds are defined
-        if self.material_parameter_bounds is None:
+        if self.material_parameter_inputs is None:
             raise ValueError(
                 "Material parameter bounds must be defined before optimization."
             )
+
+        # Check that iteration directory does not exist, to avoid overwriting previous optimization results
+        if os.path.exists(self.iterations_directory):
+            raise FileExistsError(
+                f"Iteration directory '{self.iterations_directory}' already exists. Please remove or rename it before starting optimization to avoid overwriting previous results."
+            )
+        os.makedirs(self.iterations_directory)
 
         # Connect to the input and output controllers to their respective PLAXIS servers
         self.ci.connect(ip_address=self.ip_address, port=self.input_port)
@@ -869,44 +867,18 @@ class ParameterOptimization2D:
             raise IOError(f"Failed to create optimization model: {e}")
         print("Optimization model created successfully.")
 
-        # Get the initial material parameter values from the model
-        try:
-            initial_material_parameters = self.get_material_parameter_values(
-                model_path=self.optimization_model_path
-            )
-        except Exception as e:
-            self.kill()
-            raise ValueError(f"Failed to get initial material parameter values: {e}")
-        print("Initial material parameter values retrieved successfully.")
-
-        # Check that the initial material parameter values are within the specified bounds
-        try:
-            self.check_all_parameters_within_bounds(
-                material_parameters=initial_material_parameters
-            )
-        except ValueError as e:
-            self.kill()
-            raise ValueError(
-                f"Initial material parameter values are out of bounds: {e}"
-            )
-        print(
-            "Initial material parameter values are within the specified bounds. Proceeding with optimization."
-        )
-
         # Start optimization using scipy's least_squares function, with the compute_residuals method as
         # the objective function and the initial material parameter values as the starting point
         self._iteration_number = 0
         self._iteration_result_values = None
+        self._save_intermediate_models = save_intermediate_models
 
         try:
             optimization_result = least_squares(
                 fun=self.compute_residuals,
-                x0=self.material_parameters_to_list(initial_material_parameters),
+                x0=self.initial_values,
                 method=method,
-                bounds=(
-                    self.lower_bounds,
-                    self.upper_bounds,
-                ),
+                bounds=(self.lower_bounds, self.upper_bounds),
                 xtol=xtol,
                 ftol=ftol,
                 gtol=gtol,
