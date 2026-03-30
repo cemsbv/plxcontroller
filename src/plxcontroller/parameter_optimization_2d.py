@@ -6,8 +6,11 @@ import shutil
 from dataclasses import dataclass
 from typing import Literal
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.figure import Figure
 from scipy.optimize import OptimizeResult, least_squares
 
 from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
@@ -51,6 +54,14 @@ class MaterialParameterValue:
 
 
 @dataclass(frozen=True)
+class MaterialParameterDependency:
+    material_identification: str
+    independent_parameter_name: str
+    dependent_parameter_name: str
+    ratio: float
+
+
+@dataclass(frozen=True)
 class OptimizationIterationResult:
     iteration_number: int
     material_parameters: list[MaterialParameterValue]
@@ -87,7 +98,7 @@ class OptimizationIterationResult:
                     "result_type": measured_value.result_type,
                     "time": measured_value.time,
                     "measured_value": measured_value.value,
-                    "simulated_value": self.result_values[i],
+                    "result_value": self.result_values[i],
                     "unweighted_residual": self.result_values[i] - measured_value.value,
                     "weight": measured_value.weight,
                     "residual": residual,
@@ -116,6 +127,60 @@ class OptimizationIterationResult:
             "success": self.scipy_optimize_result.success,
         }
 
+    def plot_measured_vs_result_time_histories(
+        self, plots_per_figure: int = 3, iteration_number: int | None = None
+    ) -> list[Figure]:
+        """Plots the measured values and result values of this iteration result as a function of time."""
+        if len(self.measured_values) != len(self.result_values):
+            raise ValueError(
+                "The number of measured values must match the number of result values."
+            )
+
+        # Get the unique combinations of measured node names and result types in the residuals dataframe
+        unique_measured_node_and_result_type_combinations = (
+            self.residuals_dataframe[["point_identification", "result_type"]]
+            .drop_duplicates()
+            .values.tolist()
+        )
+
+        # For each unique_measured_node_and_result_type_combinations, get the time history and plot it in a separate plot.
+        # Save them to a PDF with 3 plots per page and return the PDF as bytes.
+        figures = []
+        for i, (point_identification, result_type) in enumerate(
+            unique_measured_node_and_result_type_combinations
+        ):
+            df = self.residuals_dataframe
+            df_subset = df[
+                (df["point_identification"] == point_identification)
+                & (df["result_type"] == result_type)
+            ]
+            i_axes = i % plots_per_figure
+            if i_axes == 0:
+                fig, axes = plt.subplots(
+                    plots_per_figure, 1, sharex=True, figsize=(10, 5 * plots_per_figure)
+                )
+                figures.append(fig)
+            axes[i_axes].plot(
+                df_subset["time"], df_subset["measured_value"], label="Measured"
+            )
+            axes[i_axes].plot(
+                df_subset["time"], df_subset["result_value"], label="Result"
+            )
+            axes[i_axes].set_xlabel("Time")
+            axes[i_axes].set_ylabel(f"{result_type} at {point_identification}")
+            if iteration_number is not None:
+                axes[i_axes].set_title(
+                    f"Measured vs Result {result_type} at {point_identification} for iteration {iteration_number}"
+                )
+            else:
+                axes[i_axes].set_title(
+                    f"Measured vs Result {result_type} at {point_identification}"
+                )
+            axes[i_axes].legend()
+            axes[i_axes].grid()
+
+        return figures
+
 
 class ParameterOptimization2D:
     def __init__(
@@ -140,6 +205,9 @@ class ParameterOptimization2D:
 
         self._measured_values: list[MeasuredValueAtPoint] | None = None
         self._material_parameter_bounds: list[MaterialParameterBounds] | None = None
+        self._material_parameter_dependencies: list[
+            MaterialParameterDependency
+        ] | None = None
 
         # Relevant for post-processing and logging during optimization
         self._iterations_directory = os.path.join(
@@ -226,6 +294,11 @@ class ParameterOptimization2D:
         """Returns the list of material parameter bounds."""
         return self._material_parameter_bounds
 
+    @material_parameter_bounds.setter
+    def material_parameter_bounds(self, bounds: list[MaterialParameterBounds]) -> None:
+        """Sets the list of material parameter bounds."""
+        self._material_parameter_bounds = bounds
+
     @property
     def lower_bounds(self) -> list[float] | float:
         """Returns a list of lower bounds for the material parameters, in the same order as self.material_parameter_bounds."""
@@ -245,6 +318,37 @@ class ParameterOptimization2D:
             bound.max_value if bound.max_value is not None else np.inf
             for bound in self.material_parameter_bounds
         ]
+
+    @property
+    def material_parameter_dependencies(
+        self,
+    ) -> list[MaterialParameterDependency] | None:
+        """Returns the list of material parameter dependencies."""
+        return self._material_parameter_dependencies
+
+    @material_parameter_dependencies.setter
+    def material_parameter_dependencies(
+        self, dependencies: list[MaterialParameterDependency]
+    ) -> None:
+        """Sets the list of material parameter dependencies."""
+        # Check that all the independent parameters in the dependencies are present in the material parameter bounds
+        if self.material_parameter_bounds is None:
+            raise ValueError(
+                "Material parameter bounds must be defined before setting material parameter dependencies."
+            )
+        bounds_dict = {
+            (bound.material_identification, bound.parameter_name): bound
+            for bound in self.material_parameter_bounds
+        }
+        for dependency in dependencies:
+            if (
+                dependency.material_identification,
+                dependency.independent_parameter_name,
+            ) not in bounds_dict:
+                raise ValueError(
+                    f"Independent parameter '{dependency.independent_parameter_name}' of material '{dependency.material_identification}' in dependency not found in material parameter bounds."
+                )
+        self._material_parameter_dependencies = dependencies
 
     def _create_optimization_model(self) -> None:
         """Creates the optimization model by copying the original model."""
@@ -465,6 +569,7 @@ class ParameterOptimization2D:
 
         materials_dict = self.ci.get_all_materials_by_identification()
 
+        # Update material parameter values in the model
         for material_parameter in material_parameter_values:
             if material_parameter.material_identification not in materials_dict:
                 raise ValueError(
@@ -476,6 +581,32 @@ class ParameterOptimization2D:
                 parameter_name=material_parameter.parameter_name,
                 value=material_parameter.value,
             )
+
+        # Update dependent material parameter values
+        if self.material_parameter_dependencies is not None:
+            for dependency in self.material_parameter_dependencies:
+                if dependency.independent_parameter_name not in [
+                    param.parameter_name
+                    for param in material_parameter_values
+                    if param.material_identification
+                    == dependency.material_identification
+                ]:
+                    raise ValueError(
+                        f"Independent parameter '{dependency.independent_parameter_name}' of material '{dependency.material_identification}' in dependency not found in the provided material parameter values."
+                    )
+                independent_value = next(
+                    param.value
+                    for param in material_parameter_values
+                    if param.material_identification
+                    == dependency.material_identification
+                    and param.parameter_name == dependency.independent_parameter_name
+                )
+                dependent_value = independent_value * dependency.ratio
+                self.ci.set_material_parameter_value(
+                    material=materials_dict[dependency.material_identification],
+                    parameter_name=dependency.dependent_parameter_name,
+                    value=dependent_value,
+                )
 
     def get_results_at_measured_points(self) -> list[float]:
         """Retrieves the simulation results at the measured points.
@@ -682,7 +813,20 @@ class ParameterOptimization2D:
         ) as f:
             json.dump(optimization_measures, f, indent=4)
 
-        # TODO: Plot the residuals and the material parameter values for this iteration and save the plots
+        # Plot the measured vs result time histories for this iteration and save the plots to a PDF
+        figures = optimization_iteration_result.plot_measured_vs_result_time_histories(
+            plots_per_figure=3, iteration_number=self._iteration_number
+        )
+        with PdfPages(
+            os.path.join(
+                self._iterations_directory,
+                f"iteration_{self._iteration_number}_measured_vs_result_time_histories.pdf",
+            )
+        ) as pdf:
+            for fig in figures:
+                pdf.savefig(fig)
+                plt.close(fig)
+
         return
 
     def optimize(
@@ -751,6 +895,9 @@ class ParameterOptimization2D:
 
         # Start optimization using scipy's least_squares function, with the compute_residuals method as
         # the objective function and the initial material parameter values as the starting point
+        self._iteration_number = 0
+        self._iteration_result_values = None
+
         try:
             optimization_result = least_squares(
                 fun=self.compute_residuals,
