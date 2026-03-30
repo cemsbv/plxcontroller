@@ -230,13 +230,13 @@ class Plaxis2DOutputController:
         # Nodes
         if point_type in ["all", "node"]:
             for node in self.g_o.Nodes:
-                self._precalculated_nodes[node.Name.value] = node
+                self._precalculated_nodes[node.Identification.value] = node
 
         # Stress points
         if point_type in ["all", "stresspoint"]:
             for stress_point in self.g_o.StressPoints:
                 self._precalculated_stress_points[
-                    stress_point.Name.value
+                    stress_point.Identification.value
                 ] = stress_point
 
         return
