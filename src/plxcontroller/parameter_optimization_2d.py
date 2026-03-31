@@ -41,14 +41,18 @@ class MaterialParameterInput:
     initial_value: float
     min_value: float | None = None
     max_value: float | None = None
-    dependent_parameters: list[DependentParameter] | None = None  # List of ParameterDependency instances
+    dependent_parameters: list[
+        DependentParameter
+    ] | None = None  # List of ParameterDependency instances
 
     def __post_init__(self) -> None:
         if self.min_value is not None and self.max_value is not None:
             if self.min_value > self.max_value:
                 raise ValueError("min_value cannot be greater than max_value.")
             if not self.min_value <= self.initial_value <= self.max_value:
-                raise ValueError("initial_value must be between min_value and max_value.")
+                raise ValueError(
+                    "initial_value must be between min_value and max_value."
+                )
 
 
 @dataclass(frozen=True)
@@ -66,10 +70,11 @@ class DependentParameter:
     """The ratio of the dependent parameter value to the main parameter value.
     For example, if the dependent parameter should be half of the main parameter, 
     the ratio would be 0.5."""
-    
+
     def __post_init__(self) -> None:
         if self.ratio <= 0:
             raise ValueError("Dependency ratio must be positive.")
+
 
 @dataclass(frozen=True)
 class OptimizationIterationResult:
@@ -306,7 +311,9 @@ class ParameterOptimization2D:
         return self._material_parameter_inputs
 
     @material_parameter_inputs.setter
-    def material_parameter_inputs(self, material_parameter_inputs: list[MaterialParameterInput]) -> None:
+    def material_parameter_inputs(
+        self, material_parameter_inputs: list[MaterialParameterInput]
+    ) -> None:
         """Sets the list of material parameter bounds."""
         self._material_parameter_inputs = material_parameter_inputs
 
@@ -334,13 +341,15 @@ class ParameterOptimization2D:
     def initial_values(self) -> list[float]:
         """Returns a list of initial values for the material parameters, in the same order as self.material_parameter_input."""
         if self.material_parameter_inputs is None:
-            raise ValueError("Material parameter input must be defined before accessing initial values.")
-        return [
-            input.initial_value for input in self.material_parameter_inputs
-        ]
+            raise ValueError(
+                "Material parameter input must be defined before accessing initial values."
+            )
+        return [input.initial_value for input in self.material_parameter_inputs]
 
     @property
-    def material_parameter_inputs_dictionary(self) -> dict[tuple[str, str], MaterialParameterInput] | None:
+    def material_parameter_inputs_dictionary(
+        self,
+    ) -> dict[tuple[str, str], MaterialParameterInput] | None:
         """Returns a dictionary mapping (material_identification, parameter_name) to MaterialParameterInput."""
         if self.material_parameter_inputs is None:
             return None
@@ -404,9 +413,9 @@ class ParameterOptimization2D:
             if result.relative_to_point is not None
         )
         for relative_point, point_type in unique_relative_points:
-            if (
-                (point_type == "node" and relative_point not in existing_nodes)
-                or (point_type == "stresspoint" and relative_point not in existing_stresspoints)
+            if (point_type == "node" and relative_point not in existing_nodes) or (
+                point_type == "stresspoint"
+                and relative_point not in existing_stresspoints
             ):
                 raise ValueError(
                     f"Relative {point_type} '{relative_point}' does not exist in the model."
@@ -601,13 +610,15 @@ class ParameterOptimization2D:
                 parameter_name=material_parameter.parameter_name,
                 value=material_parameter.value,
             )
-            
+
             # Update all the dependent parameters for this material parameter
             material_parameter_input = self.material_parameter_inputs[i]
             if material_parameter_input.dependent_parameters is not None:
                 for dependency in material_parameter_input.dependent_parameters:
                     self.ci.set_material_parameter_value(
-                        material=materials_dict[material_parameter.material_identification],
+                        material=materials_dict[
+                            material_parameter.material_identification
+                        ],
                         parameter_name=dependency.name,
                         value=material_parameter.value * dependency.ratio,
                     )
@@ -695,14 +706,18 @@ class ParameterOptimization2D:
                     (measured_value.point_identification, measured_value.result_type)
                 ]["value"],
             )[0]
-            
+
             # If there is a relative point, subtract the relative point value from the main point value
             relative_point_result_value = 0.0
             if measured_value.relative_to_point is not None:
                 relative_point_simulated_times = raw_results_per_point_and_result_type[
                     (measured_value.relative_to_point, measured_value.point_type)
                 ]["time"]
-                if not (relative_point_simulated_times[0] <= measured_value.time <= relative_point_simulated_times[-1]):
+                if not (
+                    relative_point_simulated_times[0]
+                    <= measured_value.time
+                    <= relative_point_simulated_times[-1]
+                ):
                     raise ValueError(
                         f"Measured time {measured_value.time} for relative point '{measured_value.relative_to_point}' and result type '{measured_value.result_type}' is out of bounds of the simulated times for the relative point (min: {relative_point_simulated_times[0]}, max: {relative_point_simulated_times[-1]})."
                     )
@@ -710,9 +725,10 @@ class ParameterOptimization2D:
                     measured_value.time,
                     relative_point_simulated_times,
                     raw_results_per_point_and_result_type[
-                        (measured_value.relative_to_point, measured_value.point_type)]["value"],
+                        (measured_value.relative_to_point, measured_value.point_type)
+                    ]["value"],
                 )[0]
-                
+
             # Interpolate the simulated result at the measured time
             result_values.append(result_value - relative_point_result_value)
         return result_values
@@ -769,7 +785,8 @@ class ParameterOptimization2D:
         return residuals
 
     def post_process_intermediate_result(
-        self, intermediate_result: OptimizeResult,
+        self,
+        intermediate_result: OptimizeResult,
     ) -> None:
         """
         Performs post-processing after each optimization iteration, such as saving the model with the current material parameter values and logging the results.
@@ -920,4 +937,8 @@ class ParameterOptimization2D:
             raise RuntimeError(f"Optimization failed: {e}")
 
         print("Optimization completed successfully.")
+
+        # Kill processes
+        self.kill()
+
         return optimization_result

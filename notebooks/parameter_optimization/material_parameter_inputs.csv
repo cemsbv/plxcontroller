@@ -1,8 +1,7 @@
-material_identification,parameter_name,min_value,max_value,initial_value,dependent_parameter,dependency_ratio
-Klei,lambdaModified,0.01,1.0,0.5,kappaModified,20.0
-Klei,kappaModified,0.01,1.0,0.5,,
-Klei,phi,0.01,1.0,0.5,,
-Klei,K0NC,0.01,1.0,0.5,,
-Klei,PermHorizontalPrimary,0.01,1.0,0.5,PermVertical,0.6667
-Klei,PermVertical,0.01,1.0,0.5,,
-Klei,OCR,0.01,1.0,0.5,,
+material_identification,parameter_name,initial_value,min_value,max_value,dependent_parameter,dependency_ratio
+Klei,lambdaModified,0.1237,0.08,0.2,kappaModified,0.333
+Klei,muModified,0.006875,0.004,0.01,,
+Klei,phi,38.3,20.0,40.0,,
+Klei,K0NC,0.3802,0.35,0.5,,
+Klei,PermHorizontalPrimary,0.000144,0.00048,0.00432,PermVertical,1.5
+Klei,OCR,1.5,1.0,3.0,,
