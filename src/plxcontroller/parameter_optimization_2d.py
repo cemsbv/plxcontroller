@@ -397,6 +397,21 @@ class ParameterOptimization2D:
                     f"Measured stress point '{measured_value.point_identification}' does not exist in the model."
                 )
 
+        # Check unique relative points
+        unique_relative_points = set(
+            (result.relative_to_point, result.point_type)
+            for result in self.measured_values
+            if result.relative_to_point is not None
+        )
+        for relative_point, point_type in unique_relative_points:
+            if (
+                (point_type == "node" and relative_point not in existing_nodes)
+                or (point_type == "stresspoint" and relative_point not in existing_stresspoints)
+            ):
+                raise ValueError(
+                    f"Relative {point_type} '{relative_point}' does not exist in the model."
+                )
+
         return
 
     def kill(self) -> None:
@@ -665,7 +680,7 @@ class ParameterOptimization2D:
         # Interpolate results at the measured times
         result_values = []
         for measured_value in self.measured_values:
-            # check that the measured time is within the range of the simulated times for the corresponding point and result type
+            # Check that the measured time is within the range of the simulated times for the corresponding point and result type
             simulated_times = raw_results_per_point_and_result_type[
                 (measured_value.point_identification, measured_value.result_type)
             ]["time"]
@@ -673,19 +688,33 @@ class ParameterOptimization2D:
                 raise ValueError(
                     f"Measured time {measured_value.time} for point '{measured_value.point_identification}' and result type '{measured_value.result_type}' is out of bounds of the simulated times (min: {simulated_times[0]}, max: {simulated_times[-1]})."
                 )
-            # interpolate the simulated result at the measured time
-            result_values.append(
-                np.interp(
+            result_value = np.interp(
+                measured_value.time,
+                simulated_times,
+                raw_results_per_point_and_result_type[
+                    (measured_value.point_identification, measured_value.result_type)
+                ]["value"],
+            )[0]
+            
+            # If there is a relative point, subtract the relative point value from the main point value
+            relative_point_result_value = 0.0
+            if measured_value.relative_to_point is not None:
+                relative_point_simulated_times = raw_results_per_point_and_result_type[
+                    (measured_value.relative_to_point, measured_value.point_type)
+                ]["time"]
+                if not (relative_point_simulated_times[0] <= measured_value.time <= relative_point_simulated_times[-1]):
+                    raise ValueError(
+                        f"Measured time {measured_value.time} for relative point '{measured_value.relative_to_point}' and result type '{measured_value.result_type}' is out of bounds of the simulated times for the relative point (min: {relative_point_simulated_times[0]}, max: {relative_point_simulated_times[-1]})."
+                    )
+                relative_point_result_value = np.interp(
                     measured_value.time,
-                    simulated_times,
+                    relative_point_simulated_times,
                     raw_results_per_point_and_result_type[
-                        (
-                            measured_value.point_identification,
-                            measured_value.result_type,
-                        )
-                    ]["value"],
+                        (measured_value.relative_to_point, measured_value.point_type)]["value"],
                 )[0]
-            )
+                
+            # Interpolate the simulated result at the measured time
+            result_values.append(result_value - relative_point_result_value)
         return result_values
 
     def compute_residuals(self, x: list[float]) -> list[float]:
