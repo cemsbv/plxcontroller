@@ -6,14 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "plxcontroller"
 version = "0.11.0"
 description = "Controllers to create and modify Plaxis 2D and 3D models with enhanced functionalities."
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
     "plxscripting>=1.0.4,<2.0.0",
-    "numpy>=1.24.2,<2.0",
-    "shapely>=2.0.1,<3.0",
-    "matplotlib==3.7.1",
-    "scikit-spatial>=7.0.0,<8.0.0",
-    "pandas>=2.3.3,<3.0",
+    "numpy>=2.4,<3",
+    "shapely>=2.1,<3.0",
+    "matplotlib>=3.10,<4",
+    "scikit-spatial>=9.0,<10",
+    "pandas>=3.0,<4",
+    "pillow>=12.1,<13",
+    "pyzmq>=26.0,<27",
+    "setuptools>=82.0,<83",
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
