@@ -2,15 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-04-03
+
+### Features
+
+- *(2d-input)* Add get and set material parameter value
+- *(2d-output)* [**breaking**] Add the posibility to add a custom input controller to the function get_node_time_history_results
+
 ## [0.10.0] - 2026-03-24
 
 ### Bug Fixes
 
 - *(time-history)* Fix method add_point_result to check the point name
-- *(point-time-history)* Use default factory to initialize list in dataclasses
-- *(time-history)* Fix parse of time_per_phase
 - *(time-history)* Fix circular imports
+- *(time-history)* Fix parse of time_per_phase
 - *(time-history)* Fix get node x and y coordinates
+- *(point-time-history)* Use default factory to initialize list in dataclasses
 - *(time-history)* Fix circular imports
 
 ### Features
@@ -21,8 +28,8 @@ All notable changes to this project will be documented in this file.
 
 ### Miscellaneous Tasks
 
-- *(dependencies)* Add pandas to dependencies
 - *(time-history)* Remove unused file
+- *(dependencies)* Add pandas to dependencies
 
 ### Refactor
 
