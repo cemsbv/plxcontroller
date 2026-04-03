@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-04-03
+
+### Miscellaneous Tasks
+
+- *(python-version)* Upgrading python version to be 3.13 as a minimum
+
 ## [0.11.0] - 2026-04-03
 
 ### Features
@@ -15,10 +21,10 @@ All notable changes to this project will be documented in this file.
 
 - *(time-history)* Fix method add_point_result to check the point name
 - *(time-history)* Fix circular imports
+- *(time-history)* Fix circular imports
 - *(time-history)* Fix parse of time_per_phase
 - *(time-history)* Fix get node x and y coordinates
 - *(point-time-history)* Use default factory to initialize list in dataclasses
-- *(time-history)* Fix circular imports
 
 ### Features
 
@@ -28,15 +34,15 @@ All notable changes to this project will be documented in this file.
 
 ### Miscellaneous Tasks
 
-- *(time-history)* Remove unused file
 - *(dependencies)* Add pandas to dependencies
+- *(time-history)* Remove unused file
 
 ### Refactor
 
 - *(precalculation-point)* Refactor precalculation point to change identification only and not name of the points
+- *(time-history)* Refactor request node time history to use local import
 - *(node-time-history)* Refactor the method get_node_time_history_results
 - *(2d-out)* Refactor method request node time history to accept multiple phases
-- *(time-history)* Refactor request node time history to use local import
 
 ## [0.9.1] - 2026-03-23
 
