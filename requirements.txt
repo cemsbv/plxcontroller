@@ -198,7 +198,7 @@ typing-extensions==4.7.1
     # via
     #   plxcontroller (pyproject.toml)
     #   mypy
-urllib3==2.0.7
+urllib3==2.6.3
     # via requests
 wcwidth==0.2.9
     # via prompt-toolkit
