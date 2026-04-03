@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 
 from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
@@ -109,6 +110,21 @@ class Plaxis2DInputController:
         self._subprocess = None
         self._filepath = None
 
+    def copy_current_model(self, new_filepath: str) -> None:
+        """Copy the current PLAXIS model file to a new location.
+
+        Args:
+            new_filepath (str): the path to the new PLAXIS model file.
+        """
+        if self._filepath is None:
+            raise ValueError("No PLAXIS model file is currently open.")
+
+        shutil.copyfile(self._filepath, new_filepath)
+        shutil.copytree(
+            self._filepath.replace(".p2dx", ".p2dxdat"),
+            new_filepath.replace(".p2dx", ".p2dxdat"),
+        )
+
     def select_precalculation_points(
         self,
         points: list[PrecalculationPoint2D],
@@ -205,3 +221,74 @@ class Plaxis2DInputController:
             phase.ShouldCalculate = True
         self.g_i.calculate()
         self.g_i.save()
+
+    def get_all_materials_by_identification(self) -> dict[str, PlxProxyObject]:
+        """Get a material object by its identification.
+
+        Returns
+        -------
+        dict[str, PlxProxyObject]
+            A dictionary where keys are material identifications and values are the corresponding material objects.
+        """
+        materials_dict = {}
+        for material in self.g_i.Materials:
+            material_identification = material.Identification.value
+            if material_identification in materials_dict:
+                raise ValueError(
+                    f"Duplicate material identification found: '{material_identification}'. Material identifications must be unique."
+                )
+            materials_dict[material_identification] = material
+        return materials_dict
+
+    def get_material_parameter_value(
+        self, material: PlxProxyObject, parameter_name: str
+    ) -> float:
+        """Returns the value of a specific material parameter.
+
+        Parameters
+        ----------
+        material : PlxProxyObject
+            The material object.
+        parameter_name : str
+            The name of the parameter.
+
+        Returns
+        -------
+        float
+            The value of the specified material parameter.
+        """
+        try:
+            parameter_value = getattr(material, parameter_name).value
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected parameter name: {parameter_name}. No such parameter in material {material.Identification.value}."
+            )
+        return parameter_value
+
+    def set_material_parameter_value(
+        self, material: PlxProxyObject, parameter_name: str, value: float
+    ) -> None:
+        """Sets the value of a specific material parameter.
+
+        Parameters
+        ----------
+        material : PlxProxyObject
+            The material object.
+        parameter_name : str
+            The name of the parameter.
+        value : float
+            The new value of the specified material parameter.
+        """
+        try:
+            parameter = getattr(material, parameter_name)
+        except AttributeError:
+            raise ValueError(
+                f"Unexpected parameter name: {parameter_name}. No such parameter in material {material.Identification.value}."
+            )
+
+        try:
+            self.g_i.set(parameter, value)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to set parameter '{parameter_name}' for material '{material.Identification.value}': {e}"
+            )
