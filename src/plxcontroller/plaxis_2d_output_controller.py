@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
-from typing import Literal
+from typing import Any, Literal
 
 from plxscripting.plxproxy import PlxProxyGlobalObject, PlxProxyObject
 from plxscripting.server import Server, new_server
@@ -230,19 +230,23 @@ class Plaxis2DOutputController:
         # Nodes
         if point_type in ["all", "node"]:
             for node in self.g_o.Nodes:
-                self._precalculated_nodes[node.Name.value] = node
+                self._precalculated_nodes[node.Identification.value] = node
 
         # Stress points
         if point_type in ["all", "stresspoint"]:
             for stress_point in self.g_o.StressPoints:
                 self._precalculated_stress_points[
-                    stress_point.Name.value
+                    stress_point.Identification.value
                 ] = stress_point
 
         return
 
+    # TODO: Improved the typing "Any" of input_conroller. It is now used to avoid circular imports.
     def get_node_time_history_results(
-        self, phase_numbers: list[int], result_type_names: list[str]
+        self,
+        phase_numbers: list[int],
+        result_type_names: list[str],
+        input_controller: Any = None,
     ) -> MultiPhaseMultiPointTimeHistoryResult2D:
         """
         Get the node time history results for the given phase numbers and result types in the PLAXIS model
@@ -255,6 +259,9 @@ class Plaxis2DOutputController:
         result_type_names : list[str]
             the list of result type names for which the results are requested. Expected format for each result
             type name is "Category.Result", e.g. "Soil.X".
+        input_controller : Any, optional
+            An instance of the Plaxis2DInputController to use for retrieving phase input data.
+            If None, a new instance will be created and connected to the same PLAXIS model file.
         """
         if not isinstance(self._server, Server):
             raise ValueError("No server connection available.")
@@ -272,13 +279,20 @@ class Plaxis2DOutputController:
         ]
 
         # Start input program to retrieve phase input data
-        from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
+        ci = input_controller
 
-        ci = Plaxis2DInputController()
-        ci.connect(
-            ip_address=self._server.connection.host,
-            port=self._server.connection.port + 1,  # TODO: improve this
-        )
+        if input_controller is not None:
+            ci = input_controller
+            close_input_controller_after_use = False
+        else:
+            from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
+
+            ci = Plaxis2DInputController()
+            ci.connect(
+                ip_address=self._server.connection.host,
+                port=self._server.connection.port + 1,  # TODO: improve this
+            )
+            close_input_controller_after_use = True
         ci.open(self._filepath)
 
         # Get step output and the step number to step object mapping for the given phase number
@@ -303,8 +317,9 @@ class Plaxis2DOutputController:
             time_per_phase[phase_number] = time
 
         # Close the input program and kill the subprocess with the server host
-        ci.close()
-        ci.kill()
+        if close_input_controller_after_use:
+            ci.close()
+            ci.kill()
 
         # Request for each phase
         multi_phase_multi_point_results = MultiPhaseMultiPointTimeHistoryResult2D()
@@ -338,7 +353,9 @@ class Plaxis2DOutputController:
                         self.g_o.getcurveresultspath(
                             node,
                             phase,
-                            step_number_to_step[phase_end_step],
+                            step_number_to_step[
+                                step_numbers_per_phase[phase_number][-1]
+                            ],
                             result_type,
                         )
                     )
