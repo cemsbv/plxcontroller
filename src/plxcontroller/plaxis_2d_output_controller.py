@@ -13,6 +13,11 @@ from plxcontroller.results_2d.point_time_history_result_2d import (
     SinglePhaseSinglePointTimeHistoryResult2D,
     SinglePointTimeHistoryResult2D,
 )
+from plxcontroller.results_2d.safety_result_2d import (
+    MultiPhaseSafetyResult2D,
+    SinglePhaseSafetyResult2D,
+    SingleStepSafetyResult2D,
+)
 
 
 class Plaxis2DOutputController:
@@ -389,3 +394,101 @@ class Plaxis2DOutputController:
             the node time history results stored in the controller instance, in the format {node_name: [results]}.
         """
         return self._node_time_history_results
+
+    # TODO: Improved the typing "Any" of input_conroller. It is now used to avoid circular imports.
+    def get_safety_results(
+        self,
+        phase_numbers: list[int],
+        input_controller: Any = None,
+    ) -> MultiPhaseSafetyResult2D:
+        """
+        Get the safety results for the given phase numbers in the PLAXIS model
+        and store them in the controller instance.
+
+        Parameters
+        ----------
+        phase_numbers : list[int]
+            the numbers of the phases for which the results are requested.
+        input_controller : Any, optional
+            An instance of the Plaxis2DInputController to use for retrieving phase input data.
+            If None, a new instance will be created and connected to the same PLAXIS model file.
+        """
+        if not isinstance(self._server, Server):
+            raise ValueError("No server connection available.")
+        if not isinstance(self._filepath, str):
+            raise ValueError("No PLAXIS model file is currently open.")
+
+        # Get plaxis objects from input
+        phases = [
+            self.get_phase_from_phase_number(phase_number)
+            for phase_number in phase_numbers
+        ]
+
+        # Start input program to retrieve phase input data
+        ci = input_controller
+
+        if input_controller is not None:
+            ci = input_controller
+            close_input_controller_after_use = False
+        else:
+            from plxcontroller.plaxis_2d_input_controller import Plaxis2DInputController
+
+            ci = Plaxis2DInputController()
+            ci.connect(
+                ip_address=self._server.connection.host,
+                port=self._server.connection.port + 1,  # TODO: improve this
+            )
+            close_input_controller_after_use = True
+        ci.open(self._filepath)
+
+        # Get step output and the step number to step object mapping for the given phase number
+        step_number_to_step = {}
+        step_numbers_per_phase = {}
+        time_per_phase = {}
+        for phase_number in phase_numbers:
+            # Get first and last step number of the phase
+            phase_input = ci.get_phase_from_phase_number(phase_number)
+            phase_start_step = phase_input.FirstStep.value
+            phase_end_step = phase_input.LastStep.value
+            # Generate step output for the phase
+            step_numbers_per_phase[phase_number] = list(
+                range(phase_start_step, phase_end_step + 1, 1)
+            )
+            # Get time output and the step number mapping
+            time = []
+            for step_number in step_numbers_per_phase[phase_number]:
+                step = self.get_step_from_step_number(step_number)
+                step_number_to_step[step_number] = step
+                time.append(step.Reached.Time.value)
+            time_per_phase[phase_number] = time
+
+        # Close the input program and kill the subprocess with the server host
+        if close_input_controller_after_use:
+            ci.close()
+            ci.kill()
+
+        # Request for each phase
+        multi_phase_safety_results = MultiPhaseSafetyResult2D()
+        for phase_number, phase in zip(phase_numbers, phases):
+            phase_name = phase.Name.value
+            phase_identification = phase.Identification.value
+            single_phase_safety_results = SinglePhaseSafetyResult2D(
+                phase_name=phase_name,
+                phase_identification=phase_identification,
+            )
+            # Request for each step
+            for step_number in step_numbers_per_phase[phase_number]:
+                step = step_number_to_step[step_number]
+                single_phase_safety_results.add_result(
+                    SingleStepSafetyResult2D(
+                        step=step_number,
+                        time=step.Reached.Time.value,
+                        safety_factor=step.Reached.SumMsf.value,
+                    )
+                )
+            # Add phase result
+            multi_phase_safety_results.add_phase_result(
+                phase_result=single_phase_safety_results
+            )
+
+        return multi_phase_safety_results
