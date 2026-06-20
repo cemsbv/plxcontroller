@@ -178,7 +178,7 @@ tokenize-rt==5.2.0
     # via black
 tomli==2.0.1
     # via plxcontroller (pyproject.toml)
-tornado==6.5.5
+tornado==6.5.7
     # via
     #   ipykernel
     #   jupyter-client
