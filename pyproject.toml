@@ -16,7 +16,7 @@ dependencies = [
     "pandas>=3.0,<4",
     "pillow>=12.1,<13",
     "pyzmq>=26.0,<27",
-    "setuptools>=82.0,<83",
+    "setuptools>=84,<85",
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
