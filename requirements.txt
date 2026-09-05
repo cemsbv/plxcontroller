@@ -93,7 +93,7 @@ packaging==23.2
     #   ipykernel
     #   matplotlib
     #   pytest
-pandas==3.0.2
+pandas==3.0.5
     # via plxcontroller (pyproject.toml)
 pandas-stubs==2.1.1.230928
     # via plxcontroller (pyproject.toml)
