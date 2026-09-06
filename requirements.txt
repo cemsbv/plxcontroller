@@ -120,7 +120,7 @@ pluggy==1.3.0
     # via pytest
 plxscripting==1.0.4
     # via plxcontroller (pyproject.toml)
-prompt-toolkit==3.0.39
+prompt-toolkit==3.0.53
     # via ipython
 psutil==5.9.6
     # via
