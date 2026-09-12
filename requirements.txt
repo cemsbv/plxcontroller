@@ -128,7 +128,7 @@ psutil==5.9.6
     #   plxscripting
 ptyprocess==0.7.0
     # via pexpect
-pure-eval==0.2.2
+pure-eval==0.2.4
     # via stack-data
 pycodestyle==2.10.0
     # via
