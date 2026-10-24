@@ -14,7 +14,7 @@ dependencies = [
     "matplotlib>=3.10,<4",
     "scikit-spatial>=9.0,<10",
     "pandas>=3.0,<4",
-    "pillow>=12.1,<13",
+    "pillow>=13,<14",
     "pyzmq>=26.0,<27",
     "setuptools>=82.0,<83",
 ]
